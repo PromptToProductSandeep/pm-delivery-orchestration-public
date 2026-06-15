@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Delivery Command Center</title>
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#0e1116;--panel:#161b22;--panel2:#1c232d;--panel3:#222b36;--line:#2a313c;
+    --txt:#e6edf3;--mut:#8b97a7;--mut2:#6b7686;
+    --accent:#3b82f6;--accent2:#2f73e6;--onaccent:#fff;
+    --info:#7cc2ff;--infobg:#16243f;--infobd:#274063;
+    --good:#5dd27c;--goodbg:#16271c;--goodbd:#2a5a35;
+    --warn:#f1c453;--warnbg:#2a2412;--warnbd:#5a4a1f;
+    --bad:#ff8a85;--badbg:#2a1818;--badbd:#5a2a2a;
+    --purple:#c4a8ff;--purplebg:#241a33;--purplebd:#3d2b57;
+    --shadow:rgba(0,0,0,.55);
+  }
+  body.light{
+    color-scheme:light;
+    --bg:#f6f7f9;--panel:#fff;--panel2:#f0f2f5;--panel3:#e9edf2;--line:#e2e6ec;
+    --txt:#1c2330;--mut:#5b6675;--mut2:#8a94a3;
+    --accent:#2563eb;--accent2:#1d4ed8;--onaccent:#fff;
+    --info:#1d4ed8;--infobg:#eff5ff;--infobd:#cdddfb;
+    --good:#15803d;--goodbg:#e8f6ec;--goodbd:#bfe6cb;
+    --warn:#b45309;--warnbg:#fbf3e2;--warnbd:#ecdcb6;
+    --bad:#b91c1c;--badbg:#fbeaea;--badbd:#f0c9c9;
+    --purple:#7c3aed;--purplebg:#f1ebfc;--purplebd:#e2d3f7;
+    --shadow:rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:13.5px;line-height:1.45}
+  button{font-family:inherit;cursor:pointer}.hidden{display:none!important}
+  header{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:30}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700}.logo .dot{width:10px;height:10px;border-radius:50%;background:var(--good)}
+  .tabs{display:flex;gap:4px;margin-left:6px}
+  .tab{background:transparent;border:1px solid transparent;color:var(--mut);padding:6px 13px;border-radius:8px;font-weight:600}
+  .tab:hover{color:var(--txt);background:var(--panel2)}.tab.active{color:var(--txt);background:var(--panel2);border-color:var(--line)}
+  .spacer{flex:1}
+  .iconbtn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700}
+  .pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid var(--line);margin-left:4px}
+  .pill.live{background:var(--goodbg);color:var(--good);border-color:var(--goodbd)}.pill.off{background:var(--panel2);color:var(--mut2)}
+  .cockpit{display:grid;grid-template-columns:286px 1fr 350px;height:calc(100vh - 51px)}
+  .col{overflow-y:auto;height:100%}
+  .col.left{border-right:1px solid var(--line);background:var(--panel)}
+  .col.right{border-left:1px solid var(--line);background:var(--panel)}
+  .colhead{padding:13px 15px 7px;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--mut2);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  .newbtn{background:var(--accent);border:none;color:var(--onaccent);font-size:11px;font-weight:700;padding:5px 10px;border-radius:7px}
+  .filters{display:flex;gap:6px;padding:4px 12px 10px;flex-wrap:wrap}
+  .filters select,.filters input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:5px 8px;font-size:11.5px}
+  .filters input{flex:1;min-width:80px}
+  .ws{padding:11px 15px;border-bottom:1px solid var(--line);cursor:pointer;border-left:3px solid transparent}
+  .ws:hover{background:var(--panel2)}.ws.sel{background:var(--panel2);border-left-color:var(--accent)}
+  .ws .dom{font-size:10.5px;color:var(--mut);font-weight:700}.ws .ttl{font-weight:600;margin:3px 0 7px;font-size:13px}
+  .ws .meta{font-size:11px;color:var(--mut)}.ws .bk{font-size:10px;color:var(--bad);margin-top:4px}
+  .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase}
+  .b-DraftIntake,.b-Drafting{background:var(--panel2);color:var(--mut)}.b-DraftPackageReady{background:var(--infobg);color:var(--info)}
+  .b-Executing,.b-AwaitingCapture{background:var(--warnbg);color:var(--warn)}.b-Created,.b-ParentJiraCreated,.b-Done{background:var(--goodbg);color:var(--good)}
+  .b-QAReview{background:var(--purplebg);color:var(--purple)}.b-Blocked,.b-ApprovalNeeded{background:var(--badbg);color:var(--bad)}.b-Preflight{background:var(--warnbg);color:var(--warn)}
+  .cwrap{padding:18px 24px;max-width:780px}
+  h1{font-size:18px;margin:0 0 6px}
+  .kv{display:flex;gap:16px;flex-wrap:wrap;color:var(--mut);font-size:12px;margin-top:3px}.kv b{color:var(--txt);font-weight:600}
+  .toolbar{display:flex;gap:8px;margin:13px 0;flex-wrap:wrap}
+  .btn{border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12.5px}
+  .btn-primary{background:var(--accent);color:var(--onaccent)}.btn-primary:hover{background:var(--accent2)}
+  .btn-ghost{background:var(--panel);color:var(--txt);border:1px solid var(--line)}.btn-ghost:hover{border-color:var(--mut2)}
+  .btn-warn{background:var(--warnbg);color:var(--warn);border:1px solid var(--warnbd)}
+  .btn-rev{background:var(--purplebg);color:var(--purple);border:1px solid var(--purplebd)}
+  .btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}.btn[disabled]{opacity:.5;cursor:not-allowed}
+  .grow{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+  .sec{margin-top:20px}.sec h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut2);margin:0 0 11px;font-weight:700}
+  .activebar{display:flex;align-items:center;gap:9px;padding:10px 13px;border:1px solid var(--infobd);background:var(--infobg);border-radius:10px;margin-bottom:13px}
+  .activebar .dot2{width:8px;height:8px;border-radius:50%;background:var(--accent)}.activebar .t{font-size:12.5px}.activebar .t b{color:var(--info)}
+  .nsa{margin:0;padding:13px 15px;border:1px solid var(--infobd);border-radius:11px;background:var(--infobg)}
+  .nsa .lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--info);font-weight:700}.nsa .act{font-size:15px;font-weight:600;margin:5px 0 0}
+  .routebox{background:var(--goodbg);border:1px solid var(--goodbd);border-radius:9px;padding:11px 14px;font-size:12px}
+  .routebox .rl{color:var(--good);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+  .kvtable{width:100%;font-size:12.5px}.kvtable td{padding:3px 0;vertical-align:top}.kvtable td:first-child{color:var(--mut);width:42%}
+  .sepnote{font-size:11px;color:var(--mut);margin-top:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .card .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;margin-bottom:7px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;background:var(--panel3);border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--txt)}
+  .chip.red{border-color:var(--badbd);color:var(--bad);background:var(--badbg)}.chip.green{border-color:var(--goodbd);color:var(--good);background:var(--goodbg)}.chip.amber{border-color:var(--warnbd);color:var(--warn);background:var(--warnbg)}
+  .tl{position:relative;padding-left:22px}.tl-item{position:relative;padding:0 0 15px}
+  .tl-item:before{content:"";position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--line);border:2px solid var(--panel)}
+  .tl-item.done:before{background:var(--good)}.tl-item.cur:before{background:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.2)}.tl-item.block:before{background:var(--bad)}
+  .tl:after{content:"";position:absolute;left:-11px;top:4px;bottom:10px;width:2px;background:var(--line)}
+  .tl-item .t{font-weight:600;font-size:13px}.tl-item .d{font-size:11.5px;color:var(--mut)}
+  .agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .acard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .acard .an{font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px}.acard .ar{font-size:11px;color:var(--mut);margin:2px 0 8px}.acard .as{font-size:11.5px;color:var(--mut)}
+  .sdot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .s-ready{background:var(--good)}.s-wait{background:var(--warn)}.s-idle{background:var(--mut2)}.s-block{background:var(--bad)}.s-exec{background:var(--accent)}
+  .hist .ev{padding:7px 0;border-bottom:1px dashed var(--line)}.hist .top{font-size:11.5px;color:var(--txt);font-weight:600}.hist .sub{font-size:10.5px;color:var(--mut2);margin-top:2px}
+  .gate{margin:0 14px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .gate.approved,.gate.created{border-color:var(--goodbd)}.gate.awaiting{border-color:var(--warnbd)}.gate.rework{border-color:var(--purplebd)}.gate.locked{opacity:.55}.gate.stale{border-color:var(--warnbd)}
+  .gtop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .gname{font-weight:600;font-size:12.5px}.gagent{font-size:10.5px;color:var(--mut);margin-top:2px}
+  .gstate{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:5px;white-space:nowrap}
+  .gs-ready{background:var(--infobg);color:var(--info)}.gs-locked{background:var(--panel3);color:var(--mut2)}.gs-approved,.gs-created{background:var(--goodbg);color:var(--good)}.gs-awaiting{background:var(--warnbg);color:var(--warn)}.gs-rework{background:var(--purplebg);color:var(--purple)}.gs-stale{background:var(--warnbg);color:var(--warn)}
+  .scopeline{font-size:10.5px;color:var(--mut);margin-top:7px}
+  .outbox{margin-top:9px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:11.5px}
+  .outbox .ol{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;margin-bottom:3px}.outbox a{color:var(--info)}
+  .revbox{margin-top:8px;background:var(--purplebg);border:1px solid var(--purplebd);border-radius:7px;padding:8px 10px;font-size:11.5px;color:var(--purple)}
+  .conn{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;display:inline-block;margin-top:7px}
+  .conn.on{background:var(--goodbg);color:var(--good)}.conn.off{background:var(--warnbg);color:var(--warn)}.conn.mem{background:var(--purplebg);color:var(--purple)}
+  .indep{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;color:var(--purple);font-weight:700;margin-top:6px}
+  .stopline{margin:0 14px 12px;padding:9px 12px;border:1px dashed var(--mut2);border-radius:8px;font-size:11px;color:var(--mut);background:var(--panel2)}
+  .overlay{position:fixed;inset:0;background:rgba(4,7,12,.72);display:flex;align-items:center;justify-content:center;z-index:60;padding:18px}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:13px;max-width:580px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 24px 70px var(--shadow)}
+  .mhead{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.mhead h3{margin:0;font-size:15px}.x{background:none;border:none;color:var(--mut);font-size:19px}
+  .mbody{padding:18px}
+  .warnbox{background:var(--badbg);border:1px solid var(--badbd);border-radius:8px;padding:11px 13px;margin:12px 0;font-size:12px;color:var(--bad)}.warnbox b{color:var(--bad)}
+  .okbox{background:var(--goodbg);border:1px solid var(--goodbd);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--good)}
+  .infobox{background:var(--infobg);border:1px solid var(--infobd);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--info);margin:12px 0}
+  .formrow{margin:10px 0}.formrow label{display:block;font-size:11.5px;color:var(--mut);font-weight:600;margin-bottom:4px}
+  .formrow input,.formrow textarea,.formrow select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit}.formrow textarea{min-height:50px;resize:vertical}
+  .checkrow{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0}
+  .multi{display:grid;grid-template-columns:1fr 1fr;gap:5px}.multi label{display:flex;gap:6px;align-items:center;font-size:11.5px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+  .doc{max-width:860px;margin:0 auto;padding:30px 28px 70px}
+  .doc h1{font-size:24px;margin:0 0 4px}.doc .sub{color:var(--mut);margin-bottom:22px}
+  .doc h2{font-size:17px;margin:26px 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .doc p,.doc li{color:#c9d3de}body.light .doc p,body.light .doc li{color:#3a4456}.doc ul{padding-left:20px}.doc li{margin:5px 0}
+  .callout{border-left:3px solid var(--bad);background:var(--badbg);border-radius:0 10px 10px 0;padding:13px 16px;margin:15px 0}
+  .callout.blue{border-color:var(--accent);background:var(--infobg)}.callout .ch{font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;color:var(--bad)}.callout.blue .ch{color:var(--info)}
+  .loading{padding:34px;text-align:center;color:var(--mut)}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:6px}@keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--goodbg);border:1px solid var(--goodbd);color:var(--good);padding:10px 17px;border-radius:9px;font-size:12.5px;font-weight:600;z-index:90;opacity:0;transition:.2s;box-shadow:0 10px 30px var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-3px)}.toast.warn{background:var(--warnbg);border-color:var(--warnbd);color:var(--warn)}.toast.err{background:var(--badbg);border-color:var(--badbd);color:var(--bad)}
+  .readbar{display:flex;gap:10px;align-items:center;margin:0 0 10px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+  .readbar.rdy{border-color:var(--goodbd);background:var(--goodbg)}.readbar.nrdy{border-color:var(--warnbd);background:var(--warnbg)}.readbar b{font-size:12.5px}
+  table.pf{width:100%;border-collapse:collapse;font-size:12px;margin-top:2px}
+  table.pf th,table.pf td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:middle}
+  table.pf th{background:var(--panel2);color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+  .pfin{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:5px;padding:4px 6px;font-size:11.5px;font-family:inherit}
+  .pfsel{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:5px;padding:3px 5px;font-size:11px;font-family:inherit}
+  .kindb{font-size:9px;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:4px}.k-c{background:var(--infobg);color:var(--info)}.k-m{background:var(--panel3);color:var(--mut)}
+  .fst{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}.fs-ok{background:var(--goodbg);color:var(--good)}.fs-cand{background:var(--warnbg);color:var(--warn)}.fs-miss{background:var(--badbg);color:var(--bad)}
+  .src{font-size:10.5px;color:var(--mut)}.pfnote{font-size:10.5px;color:var(--mut);margin-top:8px}
+  .cprompt{width:100%;min-height:88px;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:8px 10px;font-size:11.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.55;resize:vertical;white-space:pre-wrap}
+  .wbcard{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 13px;margin-bottom:9px}
+  .wbh{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;margin-bottom:7px}
+  .wbrow{display:flex;gap:10px;padding:2px 0;font-size:12px;border-bottom:1px dashed var(--line)}.wbrow:last-child{border-bottom:none}
+  .wbk{color:var(--mut);min-width:140px;text-transform:capitalize}.wbv{color:var(--txt);font-weight:600;flex:1}
+  .wbopen{font-size:12px;color:var(--warn);padding:2px 0}
+  .wbdraft{margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 13px}
+  .wbdraft summary{cursor:pointer;font-weight:700;font-size:12px;color:var(--info)}
+  .wbdraft pre{white-space:pre-wrap;font-size:11px;line-height:1.5;max-height:540px;overflow:auto;margin:9px 0 0;color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wbmd{font-size:12px;line-height:1.55;max-height:560px;overflow:auto;margin-top:9px}
+  .wbmd h3{font-size:15px;margin:13px 0 6px}.wbmd h4{font-size:13px;margin:13px 0 5px;color:var(--txt)}.wbmd h5{font-size:11.5px;margin:10px 0 4px;color:var(--mut)}
+  .wbmd p{margin:6px 0;color:var(--txt)}.wbmd ul{margin:5px 0;padding-left:18px}.wbmd li{margin:3px 0}
+  .wbmd code{background:var(--panel2);padding:1px 4px;border-radius:4px;font-size:11px}.wbmd em{color:var(--mut)}
+  .wbcap{display:flex;gap:6px;margin:5px 0 9px}.wbcap .pfin{flex:1}
+  .wbans{color:var(--good);font-weight:600;font-size:11px}
+  .wbact .ev{font-size:11px;color:var(--mut);padding:4px 0;border-bottom:1px dashed var(--line)}.wbact .ev:last-child{border-bottom:none}.wbact .ev b{color:var(--txt)}
+  .wbqa{padding:6px 0;border-bottom:1px dashed var(--line)}.wbqa:last-child{border-bottom:none}
+  .wbq{font-size:11px;color:var(--mut)}.wba{font-size:12px;color:var(--good);font-weight:600;margin-top:2px}
+  .sobar{padding:10px 13px;border-radius:9px;margin-bottom:11px;font-size:12px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .sobar.off{background:var(--warnbg);border:1px solid var(--warnbd);color:var(--warn)}.sobar.on{background:var(--goodbg);border:1px solid var(--goodbd);color:var(--good)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="dot"></span> PM Delivery Command Center</div>
+  <div class="tabs"><button class="tab active" data-view="cockpit">Cockpit</button><button class="tab" data-view="intake">Intake</button><button class="tab" data-view="strategy">Strategy &amp; Risks</button><button class="tab" data-view="prd">MVP PRD</button></div>
+  <span class="spacer"></span>
+  <button class="iconbtn" onclick="toggleTheme()" id="themebtn">Light mode</button>
+  <span id="conn"></span>
+  <span id="synced" class="src" style="margin-left:10px"></span>
+</header>
+
+<div id="view-cockpit" class="cockpit">
+  <div class="col left">
+    <div class="colhead">Workstreams <button class="newbtn" onclick="openNew()">+ New run</button></div>
+    <div class="filters"><select id="fStatus" onchange="renderList()"><option value="">All status</option></select><select id="fDomain" onchange="renderList()"><option value="">All domains</option><option>OTI</option><option>R2M</option><option>Product UI</option></select><input id="fQ" placeholder="Search…" oninput="renderList()"></div>
+    <div id="wslist"><div class="loading"><span class="spin"></span>Loading…</div></div>
+  </div>
+  <div class="col"><div id="center" class="cwrap"></div></div>
+  <div class="col right">
+    <div class="colhead">Approval gates · PM action</div>
+    <div id="gates"></div>
+  </div>
+</div>
+
+<div id="view-intake" class="doc hidden">
+  <h1>Intake</h1><div class="sub">Where rough requirements + attachments land — durable, re-readable, governed.</div>
+  <div id="intakebody"></div>
+</div>
+<div id="view-strategy" class="doc hidden">
+  <h1>Strategy &amp; Risks</h1><div class="sub">The critique that keeps the build honest.</div>
+  <div class="callout"><div class="ch">Uncomfortable answer first</div>The load-bearing risk is the copy-paste seam: if a ticket gets created and never recorded, your source of truth lies. The cockpit makes that un-skippable with the awaiting-capture state.</div>
+  <h2>Sequencing</h2><p>Access first (connect Rovo/Drive), then the un-bypassable governance/enforcement layer, then durable state + audit, then the cockpit UI. The cockpit is a view over the engine — last, not first.</p>
+  <h2>The real engine</h2><p>The hygiene scanner and the reconciliation engine are the same read-and-compare core pointed at two targets: the rules page (scanner) and the state store (reconciler). Build it once.</p>
+  <h2>Stop rule</h2><p>Retire the manual run sheet when a second-PM run surfaces no new drift category and passes all five signals. New instances are fine; new categories mean the failure surface is still incomplete.</p>
+  <div class="callout blue"><div class="ch">Net</div>Build the database + enforcement, run the manual loop to extract the spec, then let the breaks log tell you what to automate. Nothing gets built that the log did not ask for.</div>
+</div>
+<div id="view-prd" class="doc hidden">
+  <h1>MVP PRD</h1><div class="sub">One control plane for delivery orchestration.</div>
+  <h2>Problem &amp; vision</h2><p>Orchestration is invisible: state lives in chat, approvals are implicit, execution is manual copy-paste. The cockpit makes orchestration visible and gate-driven so the PM manages outcomes while the system manages routing, packets, approvals, and traceability.</p>
+  <h2>MVP scope</h2><ul><li>Dashboard + workstream detail with the state object, timeline, routing, and agent status.</li><li>Separated approval gates; create gates blocked until readiness; awaiting-capture record step.</li><li>Recorded output + revision loop per gate; append-only audit, breaks, and run logs.</li></ul>
+  <h2>Governance</h2><p>Approval of one action never approves another; drafting≠execution; lookup≠application; memory always standalone; a gate cannot advance while a prior action is awaiting capture; Coordinator records before the next gate opens.</p>
+  <h2>Phases</h2><p>P1 manual cockpit (this). P2 generated packets + partial automation. P3 Coordinator calls Rovo/Drive directly behind hard gates.</p>
+</div>
+
+<div id="overlay"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const CFG={
+  NF:'__NOTION_FETCH__',NC:'__NOTION_CREATE_PAGES__',NU:'__NOTION_UPDATE_PAGE__',
+  WS_DS:'__WS_DS__',AUDIT_DS:'__AUDIT_DS__',BREAKS_DS:'__BREAKS_DS__',RUN_DS:'__RUN_DS__',
+  JIRA_CREATE:'',DRIVE_CREATE:'__DRIVE_CREATE_FILE__'
+};
+const CONN={notion:true,jira:!!CFG.JIRA_CREATE,drive:!!CFG.DRIVE_CREATE};
+const SEEDED=[];
+var SESSION_CREATED=[];
+function createdList(){try{return JSON.parse(localStorage.getItem('pmcc:ws')||'[]')}catch(e){return[]}}
+function addCreated(o){SESSION_CREATED.unshift(o);try{var l=createdList();l.unshift(o);localStorage.setItem('pmcc:ws',JSON.stringify(l))}catch(e){}}
+function allMeta(){var seen={},out=[];SESSION_CREATED.concat(createdList()).forEach(function(o){if(o&&o.pageId&&!seen[o.pageId]){seen[o.pageId]=1;out.push(o)}});return out.concat(SEEDED)}
+const AG={coord:'PM Delivery Coordinator',r2m:'R2M Jira Ticket Agent',oti:'OTI Jira Ticket Agent',prd:'PRD Creation Agent',qa:'QA / Validation Agent',drive:'Drive Agent',mem:'Memory Agent'};
+const GATES=[
+ {id:'prdcontent',name:'Approve PRD direction (Stage 1)',agent:'prd',connector:'notion',approves:['PRD direction / framing — NOT a finished PRD'],dna:['Google Doc creation','Jira preflight'],prereq:null,needsSignoff:true,tl:'PRD direction approved',outLbl:'PRD draft (link or summary)'},
+ {id:'prddoc',name:'Create Google Doc (PRD)',agent:'drive',connector:'drive',approves:['PRD Google Doc'],dna:['Memory update','Jira creation'],prereq:'prdcontent',needsFullPrd:true,tl:'Google Doc created',outLbl:'Google Doc link'},
+ {id:'preflight',name:'Run Jira preflight (read-only)',agent:'r2m',connector:'notion',approves:['Required-field discovery'],dna:['Jira creation','Metadata application'],prereq:'prdcontent',tl:'Preflight passed',outLbl:'Discovered fields + candidates'},
+ {id:'meta',name:'Approve metadata values',agent:'coord',connector:'notion',approves:['Application of approved field values'],dna:['Jira creation'],prereq:'preflight',tl:'Metadata approved',outLbl:'Approved field values'},
+ {id:'create',name:'Create parent Jira',agent:'r2m',connector:'jira',approves:['Exactly one Jira issue'],dna:['Tasks','Sub-tasks','QA Tasks','Links'],prereq:'meta',needsReady:true,tl:'Parent Jira created',outLbl:'Jira key + applied fields'},
+ {id:'arch',name:'Approve architecture inputs',agent:'coord',connector:'notion',approves:['Architecture inputs recorded'],dna:['Decomposition','Tasks'],prereq:'create',stop:true,tl:'Architecture inputs',outLbl:'Architecture inputs'},
+ {id:'mem',name:'Update memory',agent:'mem',connector:'memory',approves:['Memory store write'],dna:['Everything — always standalone'],prereq:null,independent:true,tl:null,outLbl:'Memory write reference'}
+];
+let DATA={}, cur=null, sessAudit=[];
+var titleEdited=false;var lastSync=0,syncing=false;
+
+const RULES={fields:{
+ 'OTI/Improvement':{validated:true,list:[
+  {name:'Project',kind:'metadata',sources:['PM-provided']},
+  {name:'Issue Type',kind:'metadata',sources:['PM-provided']},
+  {name:'Summary',kind:'content',sources:['payload']},
+  {name:'Description',kind:'content',sources:['payload']},
+  {name:'Components',kind:'metadata',sources:['PM-provided','precedent']},
+  {name:'Fix versions',kind:'metadata',sources:['precedent','PM-provided']},
+  {name:'Priority',kind:'metadata',sources:['precedent','PM-provided']},
+  {name:'Platform_OS',kind:'metadata',sources:['precedent','PM-provided']},
+  {name:'Form_Factor',kind:'metadata',sources:['precedent','PM-provided']},
+  {name:'Acceptance Criteria',kind:'content',sources:['payload']}
+ ]}
+}};
+function fieldsetFor(p){var dom=(p&&p.Domain)||'';var it=dom==='OTI'?'Improvement':(dom==='R2M'?'Story':'?');var key=dom+'/'+it;return {key:key,it:it,def:RULES.fields[key]||{validated:false,list:[]}};}
+function fieldStatus(f,st){if(!st||!st.v)return 'Missing';if(f.kind==='content')return 'Resolved';if(st.src==='precedent')return st.app?'Resolved':'Candidate';return 'Resolved';}
+function readinessReady(pid){var d=DATA[pid];var p=d&&d.props;if(!p)return false;var fs=fieldsetFor(p);if(!fs.def.validated)return false;var ff=gd(pid).fields||{};return fs.def.list.every(function(f){return fieldStatus(f,ff[f.name]||{})==='Resolved';});}
+function setField(name,val){var o=gd(cur);o.fields=o.fields||{};o.fields[name]=o.fields[name]||{};o.fields[name].v=(val||'').trim();persistFields('Set '+name);}
+function setFieldSource(name,src){var o=gd(cur);o.fields=o.fields||{};o.fields[name]=o.fields[name]||{};o.fields[name].src=src;if(src!=='precedent')o.fields[name].app=false;persistFields('Source '+name+' = '+src);}
+function approveField(name){var o=gd(cur);o.fields=o.fields||{};o.fields[name]=o.fields[name]||{};o.fields[name].app=true;persistFields('Approved application — '+name);}
+async function persistFields(note){var ws=DATA[cur];if(!ws)return;await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Gate Data':gdStr(cur)}});log('PM',note,'preflight field','');renderCenter();renderGates();}
+function preflightHtml(p){
+  var fs=fieldsetFor(p);
+  if(!fs.def.validated)return '<div class="pfnote">Field set for <b>'+esc(fs.key)+'</b> is not yet validated. Per your System doc §20, only OTI/Improvement has a proven checklist. Validate this issue type in the rules file before any Jira creation — the Create gate stays locked.</div>';
+  var ff=gd(cur).fields||{};var ready=readinessReady(cur);
+  var nPending=fs.def.list.filter(function(f){return fieldStatus(f,ff[f.name]||{})!=='Resolved'}).length;
+  var rows=fs.def.list.map(function(f){
+    var st=ff[f.name]||{};var s=fieldStatus(f,st);var stCls=s==='Resolved'?'fs-ok':(s==='Candidate'?'fs-cand':'fs-miss');
+    var cur_src=st.src||(f.kind==='content'?'payload':'PM-provided');
+    var srcCell=f.kind==='content'?'<span class="src">requirement payload</span>':'<select class="pfsel" onchange="setFieldSource(\''+esc(f.name)+'\',this.value)">'+f.sources.map(function(o){return '<option '+(cur_src===o?'selected':'')+'>'+o+'</option>'}).join('')+'</select>';
+    var act=(f.kind==='metadata'&&st.src==='precedent'&&!st.app&&st.v)?'<button class="btn btn-ghost btn-sm" style="padding:2px 7px" onclick="approveField(\''+esc(f.name)+'\')">Approve application</button>':'';
+    return '<tr><td><b>'+esc(f.name)+'</b></td><td><span class="kindb '+(f.kind==='content'?'k-c':'k-m')+'">'+f.kind+'</span></td><td><input class="pfin" value="'+esc(st.v||'')+'" placeholder="'+(f.kind==='content'?'from requirement payload':'value')+'" onchange="setField(\''+esc(f.name)+'\',this.value)"></td><td>'+srcCell+'</td><td><span class="fst '+stCls+'">'+s+'</span></td><td>'+act+'</td></tr>';
+  }).join('');
+  return '<div class="readbar '+(ready?'rdy':'nrdy')+'"><b>'+(ready?'✓ Creation readiness: READY':'Creation readiness: NOT READY')+'</b><span style="color:var(--mut);font-size:11.5px">'+(ready?'All required fields resolved &amp; approved — Create-Jira gate unlocked.':nPending+' field'+(nPending!==1?'s':'')+' pending. Create-Jira gate stays locked.')+'</span></div><table class="pf"><tr><th>Required field</th><th>Kind</th><th>Value</th><th>Source</th><th>Status</th><th></th></tr>'+rows+'</table><div class="pfnote">Content fields (Description, Acceptance Criteria) come from the approved requirement payload — never copied from precedent. Metadata from precedent needs an explicit <b>Approve application</b>: lookup ≠ application. Field definitions read from the rules-as-code file.</div>';
+}
+
+function hasBridge(){return !!(window.cowork&&typeof window.cowork.callMcpTool==='function')}
+async function call(tool,args){if(!tool)return{ok:false,notConnected:true};
+  if(!hasBridge())return{ok:false,error:'No connector bridge in this view. Open the LIVE artifact (Cowork artifacts panel → “Pm Delivery Command Center”), not a static file preview.'};
+  try{var r=await window.cowork.callMcpTool(tool,args);if(r&&r.isError)return{ok:false,error:(r.content&&r.content[0]&&r.content[0].text)||'tool error'};
+    var raw='';if(r&&r.content&&r.content[0]&&r.content[0].text)raw=r.content[0].text;else if(r&&r.structuredContent)raw=JSON.stringify(r.structuredContent);return{ok:true,raw,r};
+  }catch(e){return{ok:false,error:String(e&&e.message||e)}}}
+function parseProps(raw){var m=raw&&raw.match(/<properties>\s*([\s\S]*?)\s*<\/properties>/);if(!m)return null;var t=m[1];
+  try{return JSON.parse(t)}catch(e){try{return JSON.parse(t.replace(/\\"/g,'"').replace(/\\n/g,'\n').replace(/\\\\/g,'\\'))}catch(e2){return null}}}
+function parseBody(raw){if(!raw)return '';
+  var m=raw.match(/<content>([\s\S]*?)<\/content>/);var b=m?m[1]:'';
+  if(!b){var x=raw.match(/<\/properties>\s*([\s\S]*?)\s*<\/page>/);b=x?x[1]:'';}
+  b=b.replace(/<blank-page>[\s\S]*?<\/blank-page>/g,'');
+  b=b.replace(/\\r/g,'').replace(/\\t/g,'  ').replace(/\\n/g,'\n');
+  b=b.replace(/\\+([{}\[\]()"#*_`|.\-+>~])/g,'$1').replace(/\\\\/g,'\\');
+  return b.trim();}
+function mdToHtml(md){var lines=(md||'').split('\n'),out=[],inUl=false;
+  function closeUl(){if(inUl){out.push('</ul>');inUl=false;}}
+  lines.forEach(function(ln){var t=ln.trim();if(!t){closeUl();return;}
+    t=esc(t).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');
+    if(/^#{3,}\s/.test(t)){closeUl();out.push('<h5>'+t.replace(/^#{3,}\s/,'')+'</h5>');}
+    else if(/^##\s/.test(t)){closeUl();out.push('<h4>'+t.replace(/^##\s/,'')+'</h4>');}
+    else if(/^#\s/.test(t)){closeUl();out.push('<h3>'+t.replace(/^#\s/,'')+'</h3>');}
+    else if(/^[-*]\s/.test(t)){if(!inUl){out.push('<ul>');inUl=true;}out.push('<li>'+t.replace(/^[-*]\s/,'')+'</li>');}
+    else if(/^\d+\.\s/.test(t)){if(!inUl){out.push('<ul>');inUl=true;}out.push('<li>'+t.replace(/^\d+\.\s/,'')+'</li>');}
+    else{closeUl();out.push('<p>'+t.replace(/^\*(.+)\*$/,'<em>$1</em>')+'</p>');}});
+  closeUl();return out.join('');}
+function parseNewId(raw){var m=raw&&raw.match(/"id"\s*:\s*"([0-9a-f-]{32,36})"/i);return m?m[1]:null}
+function parseNewUrl(raw){var m=raw&&raw.match(/"url"\s*:\s*"(https:\/\/[^"]+)"/i);return m?m[1]:null}
+function parseDocUrl(raw){if(!raw)return '';var m=raw.match(/"(?:webViewLink|webContentLink|url)"\s*:\s*"([^"]+)"/i);if(m)return m[1].replace(/\\u0026/g,'&').replace(/\\\//g,'/');var idm=raw.match(/"id"\s*:\s*"([A-Za-z0-9_-]{20,})"/);if(idm)return 'https://docs.google.com/document/d/'+idm[1]+'/edit';return '';}
+function gd(p){var d=DATA[p];if(!d)return{st:{},out:{},rev:{},fields:{}};if(!d._gd){var raw=d.props&&d.props['Gate Data'];var o=null;
+  if(raw){try{o=JSON.parse(raw)}catch(e){try{o=JSON.parse(raw.replace(/\\(?![\\"\/bfnrtu])/g,''))}catch(e2){try{o=JSON.parse(raw.replace(/\\+([{}\[\]>])/g,'$1'))}catch(e3){o=null}}}}
+  d._gd=o||{};d._gd.st=d._gd.st||{};d._gd.out=d._gd.out||{};d._gd.rev=d._gd.rev||{};d._gd.fields=d._gd.fields||{};}return d._gd;}
+function gdStr(p){return JSON.stringify(gd(p))}
+function openText(x){return typeof x==='string'?x:((x&&x.q)||'');}
+function openOptions(x){return (x&&typeof x==='object'&&x.options&&x.options.length)?x.options:null;}
+function decompReady(p){var g=gd(p);return !!(g.decomposition&&g.decomposition.length);}
+function signedOff(p){var g=gd(p);return !!(g.signoff&&g.decomposition&&g.decomposition.length&&g.signoffTs&&g.signoffTs===g.decompositionTs);}
+function gget(p,g){return gd(p).st[g]||''}
+function gset(p,g,v){var o=gd(p);if(v)o.st[g]=v;else delete o.st[g];}
+function goutGet(p,g){return gd(p).out[g]||''}
+function goutSet(p,g,v){var o=gd(p);if(v)o.out[g]=v;else delete o.out[g];}
+function grevGet(p,g){return gd(p).rev[g]||''}
+function grevSet(p,g,v){var o=gd(p);if(v)o.rev[g]=v;else delete o.rev[g];}
+function dependsOn(g,gid){var p=g.prereq;while(p){if(p===gid)return true;var pg=GATES.find(function(x){return x.id===p});p=pg?pg.prereq:null;}return false;}
+function clearDownstream(gid){GATES.forEach(function(g){if(dependsOn(g,gid)){gset(cur,g.id,'');grevSet(cur,g.id,'');goutSet(cur,g.id,'');}});}
+function splitList(s){return(s||'').split(';').map(function(x){return x.trim()}).filter(Boolean)}
+function YN(b){return b?'__YES__':'__NO__'}function nowt(){return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+function esc(s){return(s||'').replace(/[<>&]/g,function(c){return{'<':'&lt;','>':'&gt;','&':'&amp;'}[c]})}
+function isUrl(s){return /^https?:\/\//i.test((s||'').trim())}
+function gstate(g){var v=gget(cur,g.id);
+  if(v==='approved'||v==='created'){if(!signedOff(cur))return 'stale';if(g.prereq){var pv=gget(cur,g.prereq);if(!(pv==='approved'||pv==='created'))return 'locked';}return v;}
+  if(v==='awaiting'||v==='rework')return v;
+  if(!signedOff(cur))return 'locked';
+  if(g.prereq){var pv2=gget(cur,g.prereq);if(!(pv2==='approved'||pv2==='created'))return 'locked';}
+  if(g.needsFullPrd&&!gd(cur).fullPrd)return 'locked';
+  if(g.needsReady&&!readinessReady(cur))return 'locked';
+  return 'ready';}
+function anyAwaiting(){return GATES.some(function(g){return gget(cur,g.id)==='awaiting'})}
+function firstReady(){return GATES.find(function(g){return gstate(g)==='ready'})}
+function activeInfo(){
+  var a=GATES.find(function(g){return gget(cur,g.id)==='awaiting'});if(a)return{label:'Awaiting result from <b>'+AG[a.agent]+'</b> — record it',agent:a.agent};
+  var r=GATES.find(function(g){return gget(cur,g.id)==='rework'});if(r)return{label:'Revision requested — <b>'+AG[r.agent]+'</b> to redo “'+r.name+'”',agent:r.agent};
+  var e=firstReady();if(e)return{label:'Ready for you — “'+e.name+'” routes to <b>'+AG[e.agent]+'</b>',agent:e.agent};
+  return{label:'All Segment A gates resolved for this workstream',agent:'coord'};
+}
+function agentStatus(k){
+  if(k==='coord')return{st:'wait',lbl:'Control tower'};
+  if(k==='mem')return{st:'block',lbl:'Blocked until approval'};
+  var gs=GATES.filter(function(g){return g.agent===k});
+  if(gs.some(function(g){return gget(cur,g.id)==='awaiting'}))return{st:'exec',lbl:'Executing'};
+  if(gs.some(function(g){return gget(cur,g.id)==='rework'}))return{st:'wait',lbl:'Revision requested'};
+  var fr=firstReady();if(fr&&fr.agent===k)return{st:'ready',lbl:'Ready'};
+  if(gs.some(function(g){var v=gget(cur,g.id);return v==='approved'||v==='created'}))return{st:'idle',lbl:'Done its part'};
+  return{st:'idle',lbl:'Idle'};
+}
+
+async function loadAll(){
+  if(!hasBridge()){var w=document.getElementById('wslist');if(w)w.innerHTML='<div style="margin:12px;padding:12px 14px;border:1px solid var(--warnbd);background:var(--warnbg);color:var(--warn);border-radius:9px;font-size:12px"><b>⚠ Static preview — connectors disabled.</b><br>This view has no connector bridge, so Notion/Drive actions can\'t run. Open the live artifact from the Cowork <b>artifacts panel</b> (“Pm Delivery Command Center”) to create runs and save intake.</div>';document.getElementById('conn').innerHTML='<span class="pill off">preview — connectors off</span>';return;}
+  document.getElementById('conn').innerHTML=
+    '<span class="pill '+(CONN.notion?'live':'off')+'">Notion '+(CONN.notion?'live':'off')+'</span>'+
+    '<span class="pill '+(CONN.jira?'live':'off')+'">Jira '+(CONN.jira?'live':'manual')+'</span>'+
+    '<span class="pill '+(CONN.drive?'live':'off')+'">Drive '+(CONN.drive?'live':'manual')+'</span>';
+  DATA={};var metas=allMeta();
+  for(var i=0;i<metas.length;i++){var m=metas[i];var r=await call(CFG.NF,{id:m.pageId});
+    if(r.ok){var p=parseProps(r.raw);if(p)DATA[m.pageId]={pageId:m.pageId,url:m.url,title:m.title,props:p,body:parseBody(r.raw)}}
+    if(!DATA[m.pageId])DATA[m.pageId]={pageId:m.pageId,url:m.url,title:m.title,props:null,error:r.error||'unreadable'};}
+  if(!cur){try{cur=localStorage.getItem('pmcc:cur')||null}catch(e){}}
+  if(!cur||!DATA[cur]){var f=allMeta()[0];cur=f&&f.pageId;}
+  var sel=document.getElementById('fStatus');var seen={};[].forEach.call(sel.options,function(o){seen[o.value]=1});
+  allMeta().forEach(function(m){var p=DATA[m.pageId]&&DATA[m.pageId].props;if(p&&p.Status&&!seen[p.Status]){seen[p.Status]=1;var o=document.createElement('option');o.value=p.Status;o.textContent=p.Status;sel.appendChild(o);}});
+  lastSync=Date.now();renderAll();updateSync();
+}
+function renderAll(){renderList();renderCenter();renderGates();}
+function badgeCls(s){return 'b-'+(s||'Drafting').replace(/[^A-Za-z]/g,'')}
+function renderList(){
+  var fs=document.getElementById('fStatus').value,fd=document.getElementById('fDomain').value,fq=(document.getElementById('fQ').value||'').toLowerCase();
+  document.getElementById('wslist').innerHTML=allMeta().filter(function(m){var p=DATA[m.pageId]&&DATA[m.pageId].props;if(!p)return true;return(!fs||p.Status===fs)&&(!fd||p.Domain===fd)&&(!fq||(p.Title||'').toLowerCase().indexOf(fq)>=0)}).map(function(m){
+    var d=DATA[m.pageId],p=d&&d.props;
+    if(!p)return '<div class="ws '+(m.pageId===cur?'sel':'')+'" onclick="sel(\''+m.pageId+'\')"><div class="ttl">'+esc(m.title||m.pageId.slice(0,8))+'</div><div class="meta" style="color:var(--bad)">unreadable</div></div>';
+    var blk=splitList(p['Blocked Actions']).length;
+    return '<div class="ws '+(m.pageId===cur?'sel':'')+'" onclick="sel(\''+m.pageId+'\')"><div class="dom">'+esc(p.Domain||'')+' · '+esc(p.Stage||'')+'</div><div class="ttl">'+esc(p.Title||'')+'</div><div class="meta"><span class="badge '+badgeCls(p.Status)+'">'+esc(p.Status||'')+'</span></div><div class="meta" style="margin-top:6px">▸ '+esc(p['Next Safe Action']||'')+'</div><div class="bk">⛔ '+blk+' blocked</div></div>';
+  }).join('')||'<div style="padding:16px;color:var(--mut)">No matches.</div>';
+}
+function timelineHtml(p){
+  var nodes=[{t:'Requirement captured',d:'',c:'done'}];
+  var sawCur=false;
+  GATES.forEach(function(g){if(!g.tl)return;var st=gstate(g);var c,d='';
+    if(st==='approved'||st==='created'){c='done';if(g.id==='create'&&p['Jira Key'])d=p['Jira Key'];}
+    else if(st==='awaiting'){c='cur';d='executing — awaiting capture';sawCur=true;}
+    else if(st==='rework'){c='cur';d='revision requested';sawCur=true;}
+    else if(st==='ready'&&!sawCur){c='cur';d='recommended next';sawCur=true;}
+    else c='block';
+    nodes.push({t:g.tl,d:d,c:c});
+  });
+  nodes.push({t:'Task decomposition',d:'Segment B — not in this run',c:'block'});
+  return '<div class="tl">'+nodes.map(function(n){return '<div class="tl-item '+n.c+'"><div class="t">'+esc(n.t)+'</div><div class="d">'+esc(n.d||'')+'</div></div>'}).join('')+'</div>';
+}
+function renderCenter(){
+  var d=DATA[cur],p=d&&d.props;var el=document.getElementById('center');
+  if(!p){el.innerHTML='<div class="loading">Pick a workstream, or create a new run.<br><span style="font-size:11px">'+esc((d&&d.error)||'')+'</span></div>';return;}
+  var ai=activeInfo();var dom=p.Domain||'';var split=dom&&dom!=='R2M';
+  var agentsHtml=Object.keys(AG).map(function(k){var s=agentStatus(k);return '<div class="acard"><div class="an"><span class="sdot s-'+s.st+'"></span>'+AG[k]+'</div><div class="as">'+s.lbl+'</div></div>'}).join('');
+  el.innerHTML=
+    '<h1>'+esc(p.Title)+'</h1>'+
+    '<div class="kv"><span>Domain <b>'+esc(dom)+'</b></span><span>Stage <b>'+esc(p.Stage||'')+'</b></span><span>Status <b><span class="badge '+badgeCls(p.Status)+'">'+esc(p.Status||'')+'</span></b></span>'+(p['Jira Key']?'<span>Jira <b>'+esc(p['Jira Key'])+'</b></span>':'')+'</div>'+
+    '<div class="kv"><span>Coordinator <b>'+esc(p['Coordinator Note']||'')+'</b></span></div>'+
+    '<div class="sec" style="margin-top:14px">'+intakeHtml(p)+'</div>'+
+    '<div class="sec"><h3>Stage 1 Workbench — decisions &amp; draft (live from chat)</h3>'+workbenchHtml(p,cur)+'</div>'+
+    '<div class="toolbar"><button class="btn btn-warn btn-sm" onclick="openBreak()">🔎 Log a break</button><button class="btn btn-ghost btn-sm" onclick="openFinish()">Finish run → Run Log</button></div>'+
+    '<div class="activebar"><span class="dot2"></span><span class="t">Active now: '+ai.label+'</span></div>'+
+    '<div class="nsa"><div class="lbl">▸ Next step (Coordinator)</div><div class="act">'+esc(nextStep(p,cur).lbl)+'</div><div class="sepnote" style="margin-top:4px">Run it from the Coordinator prompt box, or just say it in chat. · Cockpit gate: '+esc(p['Next Safe Action']||'—')+'</div></div>'+
+    '<div class="sec"><h3>Routing — domain governance vs execution delegate</h3><div class="routebox"><div class="rl">Routing decision</div><table class="kvtable"><tr><td>Domain governance</td><td><b>'+esc(dom)+'</b></td></tr><tr><td>Execution delegate</td><td><b>R2M Jira Ticket Agent</b></td></tr><tr><td>Delegate role</td><td>'+(split?'Jira-enabled execution delegate only — NOT the '+esc(dom)+' domain specialist':'Jira-enabled execution delegate (domain &amp; tool aligned)')+'</td></tr></table>'+(split?'<div class="sepnote">⚠ Domain ('+esc(dom)+') ≠ delegate name. The delegate executes Jira as a generic worker; it does not own '+esc(dom)+' governance.</div>':'')+'</div></div>'+
+    '<div class="sec"><h3>Workstream state object</h3><div class="grid2">'+
+      '<div class="card"><div class="k">Approved fields</div><div class="chips">'+(splitList(p['Approved Fields']).map(function(c){return '<span class="chip green">'+esc(c)+'</span>'}).join('')||'<span class="chip">—</span>')+'</div></div>'+
+      '<div class="card"><div class="k">Missing fields</div><div class="chips">'+(splitList(p['Missing Fields']).map(function(c){return '<span class="chip amber">'+esc(c)+'</span>'}).join('')||'<span class="chip green">none</span>')+'</div></div>'+
+      '<div class="card"><div class="k">Created artifacts</div><div class="chips">'+(splitList(p['Created Artifacts']).map(function(c){return '<span class="chip green">'+esc(c)+'</span>'}).join('')||'<span class="chip">—</span>')+'</div></div>'+
+      '<div class="card"><div class="k">Blocked actions</div><div class="chips">'+(splitList(p['Blocked Actions']).map(function(c){return '<span class="chip red">'+esc(c)+'</span>'}).join('')||'<span class="chip">—</span>')+'</div></div>'+
+    '</div></div>'+
+    '<div class="sec"><h3>Required-field preflight — gates Jira creation</h3>'+preflightHtml(p)+'</div>'+
+    '<div class="sec"><h3>Lifecycle timeline</h3>'+timelineHtml(p)+'</div>'+
+    '<div class="sec"><h3>Agents — live status</h3><div class="agents">'+agentsHtml+'</div></div>'+
+    '<div class="sec"><h3>Decision &amp; history (this session)</h3><div class="hist">'+(sessAudit.length?sessAudit.slice().reverse().map(function(e){return '<div class="ev"><div class="top">'+e.ts+' · '+esc(e.actor)+' — '+esc(e.action)+'</div><div class="sub">scope: '+esc(e.scope||'—')+(e.output?' · output: '+esc(e.output):'')+'</div></div>'}).join(''):'<div class="ev"><div class="sub" style="color:var(--mut2)">No actions yet. Approvals, revisions and results log here and to the Notion audit log.</div></div>')+'</div></div>';
+}
+function renderGates(){
+  if(!DATA[cur]||!DATA[cur].props){document.getElementById('gates').innerHTML='';return;}
+  var dr=decompReady(cur),so=signedOff(cur),gg=gd(cur),stale=gg.signoff&&dr&&gg.signoffTs!==gg.decompositionTs,sobar;
+  if(so)sobar='<div class="sobar on" style="margin:0 14px 11px"><span>✓ Stage 1 signed off — gates open</span><button class="btn btn-ghost btn-sm" onclick="setSignoff(false)">Re-lock</button></div>';
+  else if(!dr)sobar='<div class="sobar off" style="margin:0 14px 11px"><span>⚠ Gates locked — run the re-baseline (decompose) in chat first.</span><button class="btn btn-ghost btn-sm" disabled>Sign off (re-baseline first)</button></div>';
+  else if(stale)sobar='<div class="sobar off" style="margin:0 14px 11px"><span>⚠ Draft changed since sign-off — re-review the Workbench (centre) &amp; re-sign.</span><button class="btn btn-primary btn-sm" onclick="setSignoff(true)">Re-sign Stage 1</button></div>';
+  else sobar='<div class="sobar off" style="margin:0 14px 11px"><span>⚠ Gates locked — review the Stage 1 Workbench in the centre panel, then sign off.</span><button class="btn btn-primary btn-sm" onclick="setSignoff(true)">Sign off Stage 1</button></div>';
+  document.getElementById('gates').innerHTML=sobar+GATES.map(function(g){return gateCard(g)}).join('')+'<div class="stopline">⛔ Segment A ends at <b>Approve architecture inputs</b>. Do not decompose — that is Segment B.</div>';
+}
+function setSignoff(v){
+  if(!v){commitSignoff(false);return;}
+  if(!decompReady(cur)){toast('Run the re-baseline (decompose) in chat first — nothing to sign off yet.','warn');return;}
+  var g=gd(cur),title=(DATA[cur]&&DATA[cur].props&&DATA[cur].props.Title)||'',nDec=(g.decomposition||[]).length,nRes=Object.keys(g.resolved||{}).length,ua=(g.open||[]).filter(function(x){return !(g.answers||{})[openText(x)]}).length;
+  modal('Sign off Stage 1','<p style="margin-top:0;color:var(--mut)">'+esc(title)+'</p><div class="infobox">This unlocks the approval gates (Approve PRD content → Create Doc → preflight → create). You are attesting that you reviewed the <b>Stage 1 Workbench</b> in the centre panel — routing, decisions, Q&amp;A, the candidate stories and the draft.</div><div class="okbox"><b>'+nDec+'</b> candidate stories · <b>'+nRes+'</b> confirmed decisions · <b>'+ua+'</b> open item'+(ua!==1?'s':'')+' still unanswered</div>'+(ua?'<div class="warnbox">'+ua+' open item'+(ua!==1?'s':'')+' unanswered. These are per-story / later-gate details — you can sign off anyway, or cancel and answer them in the Workbench first.</div>':'')+'<div class="grow"><button class="btn btn-primary" id="sobtn" onclick="commitSignoff(true)">Confirm sign-off</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');
+}
+async function commitSignoff(v){var ws=DATA[cur];var g=gd(cur);
+  if(v&&!decompReady(cur)){toast('Run the re-baseline first.','warn');return;}
+  g.signoff=!!v;g.signoffTs=v?(g.decompositionTs||''):'';
+  await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Gate Data':gdStr(cur)}});
+  await auditRow(ws,'PM',v?'Stage 1 signed off — gates unlocked':'Stage 1 sign-off revoked','Stage 1 sign-off','gate lock',v?'unlocked':'re-locked');log('PM',v?'Stage 1 signed off':'Sign-off revoked','signoff','');closeModal();renderAll();toast(v?'Stage 1 signed off — gates unlocked.':'Re-locked — gates closed until sign-off.',v?'':'warn');}
+function gateCard(g){
+  var st=gstate(g);
+  var stMap={ready:'gs-ready',locked:'gs-locked',approved:'gs-approved',created:'gs-created',awaiting:'gs-awaiting',rework:'gs-rework',stale:'gs-stale'};
+  var stLbl={ready:'Eligible',locked:'Locked',approved:'Approved',created:'Created',awaiting:'Awaiting capture',rework:'Revision requested',stale:'Stale — re-validate'};
+  var prereqName=g.prereq?(GATES.find(function(x){return x.id===g.prereq})||{}).name:'';
+  var conn=g.connector==='notion'?'<span class="conn on">● records to Notion</span>':g.connector==='memory'?'<span class="conn mem">◆ standalone</span>':(CONN[g.connector]?'<span class="conn on">● '+g.connector+' live</span>':'<span class="conn off">○ '+g.connector+' manual — record result</span>');
+  var out=goutGet(cur,g.id),rev=grevGet(cur,g.id),body='';
+  if((st==='ready'||st==='rework')&&g.connector==='notion')body+='<div class="scopeline">Does NOT approve: '+g.dna.join(', ')+'</div>';
+  if(rev&&st==='rework')body+='<div class="revbox"><b>Revision asked:</b> '+esc(rev)+'</div>';
+  if(st==='stale')body+='<div class="warnbox"><b>⚠ Sign-off withdrawn — this approval is stale.</b> Re-sign Stage 1 to restore it, or Undo to clear and re-approve after reviewing.</div>';
+  if(st==='approved'||st==='created'||st==='stale'){
+    body+='<div class="outbox"><div class="ol">'+(g.outLbl||'Output')+'</div>'+(out?(isUrl(out)?'<a href="'+esc(out)+'" target="_blank" rel="noopener">'+esc(out)+'</a>':esc(out)):'<span style="color:var(--warn)">⚠ output not recorded</span>')+' <button class="btn btn-ghost btn-sm" style="margin-left:6px;padding:2px 7px" onclick="openOutput(\''+g.id+'\')">'+(out?'edit':'+ add')+'</button></div>';
+    if(rev)body+='<div class="revbox"><b>Revision flagged:</b> '+esc(rev)+'</div>';
+  }
+  var btn='';
+  if(st==='ready'||st==='rework'){
+    if(anyAwaiting())btn='<button class="btn btn-ghost btn-sm" disabled>Capture pending result first</button>';
+    else if(g.connector==='notion')btn='<button class="btn btn-primary btn-sm" onclick="approveGate(\''+g.id+'\')">'+(st==='rework'?'Re-approve (revised)':'Approve')+'</button>';
+    else btn='<button class="btn btn-primary btn-sm" onclick="approveGate(\''+g.id+'\')">'+(st==='rework'?'Review &amp; re-approve':'Review &amp; approve')+'</button>';
+  }else if(st==='locked'){var why;if(!signedOff(cur)){why=decompReady(cur)?'needs Stage 1 sign-off':'needs re-baseline + sign-off';}else{why='needs “'+prereqName+'”';if(g.needsReady){var pvc=g.prereq?gget(cur,g.prereq):'approved';if((pvc==='approved'||pvc==='created')&&!readinessReady(cur))why='needs preflight readiness = Ready';}if(g.needsFullPrd&&!gd(cur).fullPrd)why='needs the full 15-section PRD drafted — run the chat step';}btn='<button class="btn btn-ghost btn-sm" disabled>Locked · '+why+'</button>';}
+  else if(st==='awaiting')btn='<button class="btn btn-primary btn-sm" onclick="openRecord(\''+g.id+'\')">▸ Record delegate result</button>';
+  else if(st==='approved')btn='<button class="btn btn-rev btn-sm" onclick="openRevision(\''+g.id+'\')">Request revision</button> <button class="btn btn-ghost btn-sm" onclick="undoGate(\''+g.id+'\')">Undo</button>';
+  else if(st==='stale')btn='<button class="btn btn-ghost btn-sm" onclick="undoGate(\''+g.id+'\')">Undo approval</button>';
+  else if(st==='created')btn='<span class="conn on" style="margin-top:0">✓ recorded</span> <button class="btn btn-rev btn-sm" onclick="openRevision(\''+g.id+'\')">Flag for revision</button>';
+  return '<div class="gate '+st+'"><div class="gtop"><div><div class="gname">'+g.name+'</div><div class="gagent">via '+AG[g.agent]+'</div></div><span class="gstate '+stMap[st]+'">'+stLbl[st]+'</span></div>'+(g.independent?'<div class="indep">◆ Always standalone</div>':'')+'<div>'+conn+'</div>'+body+'<div class="grow">'+btn+' <button class="btn btn-ghost btn-sm" onclick="openBreak(\''+g.id+'\')">Log break</button></div></div>';
+}
+function sel(id){cur=id;try{localStorage.setItem('pmcc:cur',id)}catch(e){}renderAll()}
+function log(actor,action,scope,output){sessAudit.push({ts:nowt(),actor:actor,action:action,scope:scope||'',output:output||''})}
+
+function approveGate(gid){var g=GATES.find(function(x){return x.id===gid});if(anyAwaiting()){toast('Capture the pending result first.','warn');return;}var st=gstate(g);if(st!=='ready'&&st!=='rework')return;openGate(gid);}
+function previewFor(g){var p=DATA[cur]&&DATA[cur].props,body=DATA[cur]&&DATA[cur].body,gg=gd(cur);
+  function draftBox(){return body?'<div class="wbmd" style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:5px">'+mdToHtml(body)+'</div>':'<div class="warnbox">No draft in the page body yet.</div>';}
+  if(g.id==='prdcontent')return '<div class="ol">PRD draft you are approving (direction / framing — not a finished PRD)</div>'+draftBox();
+  if(g.id==='prddoc')return '<div class="ol">What will be created in Drive</div><div class="okbox" style="margin-top:5px">A Google Doc titled "<b>'+esc((p&&p.Title)||'Workstream')+' — PRD</b>", containing the approved PRD content shown below.</div>'+draftBox();
+  if(g.id==='preflight')return '<div class="okbox"><b>Read-only.</b> Discovers the required Jira fields from precedent. Creates nothing and writes nothing — you review the discovered fields before any value is applied.</div>';
+  if(g.id==='meta'){var ff=gg.fields||{};var ks=Object.keys(ff);var rows=ks.map(function(k){return '<div class="wbrow"><span class="wbk">'+esc(k)+'</span><span class="wbv">'+esc((ff[k]&&ff[k].v)||'(pending)')+'</span></div>'}).join('');return '<div class="ol">Field values that will be applied</div>'+(rows?'<div style="margin-top:5px">'+rows+'</div>':'<div class="warnbox">No field values captured — run preflight first.</div>');}
+  if(g.id==='create'){var ff=gg.fields||{};var ks=Object.keys(ff);var rows=ks.map(function(k){return '<div class="wbrow"><span class="wbk">'+esc(k)+'</span><span class="wbv">'+esc((ff[k]&&ff[k].v)||'TBD')+'</span></div>'}).join('');return '<div class="ol">The single Jira issue that will be created</div><div class="okbox" style="margin-top:5px">Summary: <b>'+esc((p&&p.Title)||'')+'</b> · Project: '+esc((p&&p.Domain)||'')+'</div>'+(rows?'<div style="margin-top:6px">'+rows+'</div>':'<div class="warnbox" style="margin-top:6px">No fields resolved yet.</div>');}
+  if(g.id==='mem')return '<div class="warnbox">Memory write is standalone. Confirm exactly what will be stored before approving.</div>';
+  if(g.id==='arch')return '<div class="okbox">Records architecture inputs to Notion. No decomposition, no Tasks.</div>';
+  return '';}
+function openGate(gid){var g=GATES.find(function(x){return x.id===gid});var dna=g.dna.map(function(x){return '<span class="chip red">'+x+'</span>'}).join(' ');
+  var exec='';if(g.connector==='jira')exec=CONN.jira?'<div class="infobox">On approve, the Coordinator calls Jira, then you record the result.</div>':'<div class="infobox">Jira not wired. On approve → <b>Awaiting capture</b>; create the issue via your delegate, then <b>Record delegate result</b>.</div>';
+  if(g.connector==='drive')exec=CONN.drive?'<div class="infobox">On approve, the Coordinator creates the Google Doc via Drive and records it to Notion automatically.</div>':'<div class="infobox">Drive not wired. On approve → Awaiting capture; create the doc by hand, then Record result.</div>';
+  if(g.connector==='memory')exec='<div class="infobox">Memory is always standalone, never implied by anything else.</div>';
+  modal('Review &amp; approve: '+g.name,'<p style="margin-top:0;color:var(--mut)">Delegate: <b style="color:var(--txt)">'+AG[g.agent]+'</b></p><div style="margin:10px 0">'+previewFor(g)+'</div><div class="okbox"><b>Authorizes only:</b><br>'+g.approves.map(function(a){return '• '+a}).join('<br>')+'</div><div class="warnbox"><b>Does NOT approve:</b><div class="chips" style="margin-top:6px">'+dna+'</div></div>'+exec+'<div class="grow"><button class="btn btn-primary" id="cbtn" onclick="confirmGate(\''+g.id+'\')">Approve this action only</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function confirmGate(gid){var g=GATES.find(function(x){return x.id===gid});var ws=DATA[cur];var wasRework=gget(cur,gid)==='rework';var b=document.getElementById('cbtn');if(b){b.disabled=true;b.textContent='Recording…';}var ts=nowt();
+  if((g.connector==='jira'&&!CONN.jira)||(g.connector==='drive'&&!CONN.drive)){gset(cur,gid,'awaiting');grevSet(cur,gid,'');
+    await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Status':'Executing','Coordinator Note':'Awaiting result capture — '+g.name,'Gate Data':gdStr(cur)}});
+    await auditRow(ws,'PM',(wasRework?'Re-approved ':'Approved ')+g.name,g.name,g.approves.join('; '),'Awaiting delegate result');log('PM',(wasRework?'Re-approved ':'Approved ')+g.name,g.approves.join('; '),'awaiting');
+    closeModal();await refresh(ws.pageId);renderAll();toast('Approved. Create it via your delegate, then Record result.','warn');return;}
+  if(g.connector==='drive'){
+    var pretext=goutGet(cur,'prdcontent')||'';
+    var docBody=(ws.props.Title||'PRD')+'\n\nDomain: '+(ws.props.Domain||'')+'\n\n'+(pretext?('Approved PRD content:\n'+pretext):'PRD drafted via the PM Delivery cockpit. Replace with the approved PRD content.')+'\n';
+    var rd=await call(CFG.DRIVE_CREATE,{title:(ws.props.Title||'Workstream')+' — PRD',textContent:docBody,contentMimeType:'text/plain'});
+    if(!rd.ok){if(b){b.disabled=false;b.textContent='Approve this action only';}toast('Drive create failed: '+(rd.error||''),'err');return;}
+    var docUrl=parseDocUrl(rd.raw);gset(cur,gid,'created');goutSet(cur,gid,docUrl||'Google Doc created');grevSet(cur,gid,'');
+    var darts=splitList(ws.props['Created Artifacts']);darts.push('PRD Google Doc');gset(cur,gid,'created');var dnx=firstReady();
+    await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Created Artifacts':darts.join('; '),'Coordinator Note':'Created PRD Google Doc @ '+ts,'Next Safe Action':dnx?dnx.name:'Segment A complete','Gate Data':gdStr(cur)}});
+    await auditRow(ws,'Drive Agent','Created PRD Google Doc',g.name,'one doc',docUrl||'created');await auditRow(ws,'Coordinator','Recorded Google Doc',g.name,'state of record',docUrl||'doc');log('Drive Agent','Created PRD Google Doc','one doc',docUrl||'');
+    closeModal();await refresh(ws.pageId);renderAll();toast('Google Doc created and recorded.');return;
+  }
+  var result='Recorded to Notion';
+  if(g.connector==='jira'&&CONN.jira){var rj=await call(CFG.JIRA_CREATE,{summary:ws.props.Title,project:ws.props.Domain});result=rj.ok?'Jira executed':'Jira failed: '+(rj.error||'');}
+  if(g.connector==='drive'&&CONN.drive){var rd=await call(CFG.DRIVE_CREATE,{name:ws.props.Title+' — PRD'});result=rd.ok?'Drive doc created':'Drive failed: '+(rd.error||'');}
+  if(g.connector==='memory')result='Memory intent logged (standalone)';
+  gset(cur,gid,'approved');grevSet(cur,gid,'');
+  await auditRow(ws,g.connector==='memory'?'Memory Agent':'PM',(wasRework?'Re-approved ':'Approved ')+g.name,g.name,g.approves.join('; '),result);log('PM',(wasRework?'Re-approved ':'Approved ')+g.name,g.approves.join('; '),'');
+  var nx=firstReady();await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Next Safe Action':nx?nx.name:'Segment A complete — review with PM','Coordinator Note':(wasRework?'Re-approved ':'Approved ')+g.name+' @ '+ts,'Gate Data':gdStr(cur)}});
+  closeModal();await refresh(ws.pageId);renderAll();toast('Approved “'+g.name+'”. No other gate approved.');}
+
+function openRecord(gid){var g=GATES.find(function(x){return x.id===gid});var isJira=g.connector==='jira';
+  modal('Record delegate result — '+g.name,'<div class="infobox">Paste what the delegate returned. This makes the state store match reality.</div>'+(isJira?'<div class="formrow"><label>Jira key (e.g. OTI-244) *</label><input id="rk" placeholder="OTI-___"></div><div class="formrow"><label>Jira URL</label><input id="ru" placeholder="https://…/browse/OTI-___"></div>':'<div class="formrow"><label>Google Doc link *</label><input id="rk" placeholder="https://docs.google.com/…"></div>')+'<div class="formrow"><label>Applied fields / notes</label><input id="rf" placeholder="fields applied, confirmation no extra action taken"></div><div class="warnbox">Confirm the delegate created <b>exactly one</b> artifact. Extra tickets/links → <b>Log a break</b> (Scope expansion) first.</div><div class="grow"><button class="btn btn-primary" id="rbtn" onclick="confirmRecord(\''+g.id+'\')">Record to state store</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function confirmRecord(gid){var g=GATES.find(function(x){return x.id===gid});var ws=DATA[cur];var key=(document.getElementById('rk').value||'').trim();if(!key){toast('Enter what the delegate returned.','warn');return;}
+  var fields=document.getElementById('rf')?document.getElementById('rf').value:'';var b=document.getElementById('rbtn');if(b){b.disabled=true;b.textContent='Recording…';}var ts=nowt();var isJira=g.connector==='jira';var url=isJira&&document.getElementById('ru')?document.getElementById('ru').value:'';
+  var arts=splitList(ws.props['Created Artifacts']);arts.push(isJira?key+' (parent)':'PRD Google Doc');
+  var props={'Created Artifacts':arts.join('; '),'Coordinator Note':'Recorded '+key+' @ '+ts};if(isJira){props['Jira Key']=key;props['Status']='Parent Jira Created';}else{props['Status']='Created';}
+  await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:props});gset(cur,gid,'created');goutSet(cur,gid,url||key);
+  await auditRow(ws,isJira?'R2M delegate':'Drive Agent','Returned result: '+key,g.name,fields||key,key+(url?' '+url:''));await auditRow(ws,'Coordinator','Recorded '+key+'; restated blocked actions',g.name,'state of record',key);log(isJira?'R2M delegate':'Drive Agent','Returned '+key,fields||'',key);
+  var after=firstReady();await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Next Safe Action':after?after.name:'Segment A complete','Gate Data':gdStr(cur)}});
+  closeModal();await refresh(ws.pageId);renderAll();toast(key+' recorded. State matches reality.');}
+
+function openOutput(gid){var g=GATES.find(function(x){return x.id===gid});var co=goutGet(cur,gid);
+  modal('Record output — '+g.name,'<div class="infobox">Attach the agent output so the cockpit references it: a link (Doc, Jira) or a short summary.</div><div class="formrow"><label>'+(g.outLbl||'Output')+'</label><textarea id="ov" placeholder="link or summary">'+esc(co)+'</textarea></div><div class="grow"><button class="btn btn-primary" onclick="saveOutput(\''+g.id+'\')">Save reference</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function saveOutput(gid){var g=GATES.find(function(x){return x.id===gid});var ws=DATA[cur];var v=(document.getElementById('ov').value||'').trim();if(looksLikePrompt(v)){toast('That looks like a Coordinator prompt — paste it into CHAT, not a gate field.','warn');return;}goutSet(cur,gid,v);await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Gate Data':gdStr(cur)}});await auditRow(ws,AG[g.agent],'Output recorded — '+g.name,g.name,'reference',v);log(AG[g.agent],'Output recorded — '+g.name,'reference',v);closeModal();renderCenter();renderGates();toast('Output reference saved.');}
+
+function looksLikePrompt(t){t=t||'';return t.length>800||/rules-as-code|no external writes|contracts\.prd|Run intake on workstream|Continue workstream|read this workstream|Gate Data|FIRST read/i.test(t);}
+function openRevision(gid){var g=GATES.find(function(x){return x.id===gid});var isCreated=gget(cur,gid)==='created';
+  modal('Request revision — '+g.name,'<div class="infobox">A <b>short change note</b> for the Coordinator — NOT the next-step prompt. Prompts always go in <b>chat</b>, never in a gate field.</div><div class="scopeline">'+(isCreated?'This output is already created, so this logs the revision intent.':'This sends the gate back to needs rework; downstream gates re-lock until you re-approve.')+'</div><div class="formrow"><label>What needs to change *</label><textarea id="rv" maxlength="600" placeholder="e.g. tighten the Snooze rules; add the Resolve path"></textarea></div><div class="grow"><button class="btn btn-rev" onclick="saveRevision(\''+g.id+'\','+(isCreated?'true':'false')+')">Submit revision</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function saveRevision(gid,isCreated){var g=GATES.find(function(x){return x.id===gid});var ws=DATA[cur];var note=(document.getElementById('rv').value||'').trim();if(!note){toast('Describe the change.','warn');return;}
+  if(looksLikePrompt(note)){toast('That looks like a Coordinator prompt — paste it into CHAT, not a gate field. Put a short change note here.','warn');return;}
+  grevSet(cur,gid,note);if(!isCreated){gset(cur,gid,'rework');clearDownstream(gid);}
+  await auditRow(ws,'PM',(isCreated?'Flagged for revision — ':'Requested revision — ')+g.name,g.name,'revision',note);log('PM',(isCreated?'Flagged for revision — ':'Requested revision — ')+g.name,'revision',note);
+  await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Coordinator Note':'Revision requested on '+g.name,'Gate Data':gdStr(cur)}});
+  closeModal();await refresh(ws.pageId);renderAll();toast(isCreated?'Revision intent logged.':'Sent back for revision; downstream gates re-locked. Take the note to your Coordinator chat.','warn');}
+
+async function undoGate(gid){var g=GATES.find(function(x){return x.id===gid});var ws=DATA[cur];gset(cur,gid,'');grevSet(cur,gid,'');goutSet(cur,gid,'');clearDownstream(gid);var nx=firstReady();
+  await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Gate Data':gdStr(cur),'Next Safe Action':nx?nx.name:'—','Coordinator Note':'Undid approval of '+g.name}});
+  await auditRow(ws,'PM','Undid approval — '+g.name,g.name,'reversal','reverted to eligible');log('PM','Undid approval — '+g.name,'reversal','');
+  await refresh(ws.pageId);renderAll();toast('Undid “'+g.name+'”.','warn');}
+var DRIFT=['Intake-format mismatch','Missing state-store record','Unrecorded create','Field mismatch','Status drift','Approval-scope confusion','Approval too broad','Wanted to skip a step','Unsupported field value','Read-only step did a write','Scope expansion','Premature decomposition','Missing PRD','Missing AC','Orphaned','Needed clarification','Other'];
+var WHERE=['Intake','PRD content','Google Doc','Preflight','Metadata approval','Parent Jira create','Result capture','Architecture inputs','Decomposition','Tasks','Sub-tasks','QA Tasks','Links','Memory'];
+var FEEDS=['Scanner','Reconciler','Intake contract','Rules page','Cockpit'];
+function openBreak(gid){var wg=gid?({prdcontent:'PRD content',prddoc:'Google Doc',preflight:'Preflight',meta:'Metadata approval',create:'Parent Jira create',arch:'Architecture inputs',mem:'Memory'}[gid]||'Intake'):'Intake';
+  modal('Log a break','<div class="infobox">Capture it while concrete. A new <b>category</b> means the failure surface is still incomplete.</div><div class="formrow"><label>Break (one line) *</label><input id="bk" placeholder="what slipped"></div><div class="formrow"><label>Where</label><select id="bw">'+WHERE.map(function(w){return '<option '+(w===wg?'selected':'')+'>'+w+'</option>'}).join('')+'</select></div><div class="formrow"><label>Drift category</label><select id="bd">'+DRIFT.map(function(d){return '<option>'+d+'</option>'}).join('')+'</select></div><div class="formrow"><label>Severity</label><select id="bs"><option>High</option><option selected>Medium</option><option>Low</option></select></div><div class="formrow"><label>Expected behavior</label><input id="be"></div><div class="formrow"><label>Actual behavior</label><input id="ba"></div><div class="formrow"><label>Feeds</label><div class="multi">'+FEEDS.map(function(f){return '<label><input type="checkbox" value="'+f+'" class="bf"> '+f+'</label>'}).join('')+'</div></div><div class="checkrow"><input type="checkbox" id="brt"> <label for="brt" style="margin:0">Regression-test candidate</label></div><div class="grow"><button class="btn btn-warn" id="bbtn" onclick="confirmBreak()">Add to Breaks Log</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function confirmBreak(){var ws=DATA[cur];var title=(document.getElementById('bk').value||'').trim();if(!title){toast('Describe the break.','warn');return;}
+  var feeds=[].slice.call(document.querySelectorAll('.bf:checked')).map(function(x){return x.value});var b=document.getElementById('bbtn');if(b){b.disabled=true;b.textContent='Logging…';}
+  var props={'Break':title,'Where':document.getElementById('bw').value,'Drift type':document.getElementById('bd').value,'Severity':document.getElementById('bs').value,'Expected behavior':document.getElementById('be').value||'','Actual behavior':document.getElementById('ba').value||'','What happened':title,'Regression test candidate':YN(document.getElementById('brt').checked),'Workstream':JSON.stringify([ws.url])};
+  if(feeds.length)props['Feeds']=JSON.stringify(feeds);var r=await call(CFG.NC,{parent:{data_source_id:CFG.BREAKS_DS},pages:[{properties:props}]});
+  log('PM','Logged break: '+title,document.getElementById('bd').value,'');closeModal();renderCenter();toast(r.ok?'Break logged to Notion.':'Log failed: '+(r.error||''),r.ok?'':'err');}
+
+function openFinish(){modal('Finish run → Run Log','<div class="infobox">Records that this run happened. Stop rule fires when a <b>Second PM</b> run has all five signals checked and no new category.</div><div class="formrow"><label>Run by</label><input id="fby"></div><div class="formrow"><label>Role</label><select id="frole"><option>Owner</option><option>Second PM</option></select></div><div style="font-weight:700;font-size:11.5px;color:var(--mut);margin:10px 0 4px">Five success signals — tick honestly</div><div class="checkrow"><input type="checkbox" id="s1"><label for="s1" style="margin:0">No surprise tickets</label></div><div class="checkrow"><input type="checkbox" id="s2"><label for="s2" style="margin:0">State matched reality</label></div><div class="checkrow"><input type="checkbox" id="s3"><label for="s3" style="margin:0">No chat-digging</label></div><div class="checkrow"><input type="checkbox" id="s4"><label for="s4" style="margin:0">One yes at a time</label></div><div class="checkrow"><input type="checkbox" id="s5"><label for="s5" style="margin:0">PRD produced</label></div><div class="checkrow" style="margin-top:8px"><input type="checkbox" id="snew"><label for="snew" style="margin:0">A new drift category appeared</label></div><div class="formrow"><label>Which new categories</label><input id="fnew" placeholder="leave blank if none"></div><div class="grow"><button class="btn btn-primary" id="fbtn" onclick="confirmFinish()">Write Run Log row</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function confirmFinish(){var ws=DATA[cur];var b=document.getElementById('fbtn');if(b){b.disabled=true;b.textContent='Writing…';}var s=function(id){return document.getElementById(id).checked};
+  var all=s('s1')&&s('s2')&&s('s3')&&s('s4')&&s('s5');var role=document.getElementById('frole').value;var newcat=s('snew');var stop=all&&!newcat&&role==='Second PM';var today=new Date().toISOString().slice(0,10);
+  var props={'Run':(ws.props.Title||'Run')+' — '+today,'Run by':document.getElementById('fby').value||'','Role':role,'No surprise tickets':YN(s('s1')),'State matched reality':YN(s('s2')),'No chat-digging':YN(s('s3')),'One yes at a time':YN(s('s4')),'PRD produced':YN(s('s5')),'All signals passed':YN(all),'New drift category appeared':YN(newcat),'New categories (which)':document.getElementById('fnew').value||'','Stop-rule met':YN(stop),'date:Run date:start':today,'Workstream':JSON.stringify([ws.url])};
+  var r=await call(CFG.NC,{parent:{data_source_id:CFG.RUN_DS},pages:[{properties:props}]});closeModal();toast(r.ok?(stop?'Run logged. STOP-RULE MET — sheet can be retired.':'Run logged.'):'Failed: '+(r.error||''),r.ok?'':'err');}
+
+function deriveTitle(s){s=(s||'').replace(/\s+/g,' ').trim();if(!s)return '';var first=(s.split(/[.!?\n]/)[0]||'').trim();first=first.replace(/^(i am|i'm|we are|we're|i want to|we want to|please|need to|building|build|create|add)\s+/i,'');first=first.charAt(0).toUpperCase()+first.slice(1);if(first.length>60){var cut=first.slice(0,60);var sp=cut.lastIndexOf(' ');first=(sp>28?cut.slice(0,sp):cut).trim()+'…';}return first;}
+function autoTitle(){if(titleEdited)return;var nr=document.getElementById('nr'),nt=document.getElementById('nt');if(nr&&nt)nt.value=deriveTitle(nr.value);}
+function openNew(){titleEdited=false;modal('New run — intake','<div class="formrow"><label>Intake brief — rough requirement, paste raw *</label><textarea id="nr" style="min-height:120px" oninput="autoTitle()" placeholder="Paste the requirement as-is. Vague is fine — the Coordinator will run a working session on it."></textarea></div><div class="formrow"><label>Workstream title — auto-filled from your brief, edit if needed</label><input id="nt" oninput="titleEdited=true" placeholder="auto-generates from the first line of your brief"></div><div class="formrow"><label>Attachments — one link per line (Figma / Drive / doc URLs)</label><textarea id="na" style="min-height:60px" placeholder="https://figma.com/…&#10;https://docs.google.com/…"></textarea></div><div class="formrow"><label>Domain</label><select id="nd"><option>OTI</option><option>R2M</option><option>Product UI</option></select></div><div class="infobox">Creates a Draft Intake row in Notion with your brief + attachments. <b>No</b> Jira, Doc, or memory action — intent only. The crisp title and the draft come from the Coordinator prompt you run in chat.</div><div class="grow"><button class="btn btn-primary" id="nbtn" onclick="confirmNew()">Create run</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function confirmNew(){var brief=(document.getElementById('nr').value||'').trim();var title=(document.getElementById('nt').value||'').trim()||deriveTitle(brief);if(!title){toast('Paste a brief, or type a title.','warn');return;}var dom=document.getElementById('nd').value;var att=(document.getElementById('na').value||'').trim();var b=document.getElementById('nbtn');if(b){b.disabled=true;b.textContent='Creating…';}
+  var props={'Title':title,'Workstream ID':'run-'+Date.now(),'Domain':dom,'Stage':'Stage 0','Status':'Draft Intake','Active Agent':'PM Delivery Coordinator','Next Safe Action':'Approve PRD content','Coordinator Note':'Draft intake captured; no execution','Intake Brief':brief,'Attachments':att,'Blocked Actions':'Jira creation; Google Docs creation; Tasks; Drive changes; Memory updates','Created Artifacts':'','Approved Fields':'Project: '+dom+'; Issue Type: '+(dom==='OTI'?'Improvement':dom==='R2M'?'Story':'TBD (pending precedent)'),'Missing Fields':'Summary; Description; Acceptance Criteria; Components; Fix versions; Platform_OS; Form_Factor'};
+  var r=await call(CFG.NC,{parent:{data_source_id:CFG.WS_DS},pages:[{properties:props,icon:'🆕'}]});if(!r.ok){if(b){b.disabled=false;b.textContent='Create run';}toast('Create failed: '+(r.error||'unknown'),'err');return;}
+  var id=parseNewId(r.raw),url=parseNewUrl(r.raw);if(id){addCreated({pageId:id,url:url||('https://app.notion.com/p/'+id.replace(/-/g,'')),title:title});cur=id;}closeModal();try{await loadAll();}catch(e){}toast('Run created — Draft Intake. Nothing executed.');}
+
+function splitLines(s){return(s||'').split(/[\n;]+/).map(function(x){return x.trim()}).filter(Boolean)}
+function attLinks(s){var a=splitLines(s);return a.length?a.map(function(x){return isUrl(x)?'<a href="'+esc(x)+'" target="_blank" rel="noopener">'+esc(x)+'</a>':esc(x)}).join('<br>'):'<span style="color:var(--mut2)">none</span>'}
+function nextStep(p,pid){
+  var g=pid?gd(pid):{};var st=function(id){return (g.st&&g.st[id])||'';};
+  var head='workstream "'+(p.Title||'')+'" ('+(p.Domain||'')+')';
+  if(st('create')==='created')return {lbl:'Segment A complete — review with PM',where:'cockpit',txt:''};
+  if(st('meta')==='approved')return {lbl:'Create parent Jira — gates panel (right)',where:'cockpit',txt:''};
+  if(st('preflight')==='approved')return {lbl:'Approve metadata values — gates panel (right)',where:'cockpit',txt:''};
+  if(st('prddoc')==='approved'||st('prddoc')==='created')return {lbl:'Run Jira preflight — gates panel (right)',where:'cockpit',txt:''};
+  if(st('prdcontent')==='approved'){
+    if(!g.fullPrd)return {lbl:'Draft full PRD (15-section)',where:'chat',txt:'For '+head+', the PRD direction is approved. Read rules-as-code (pm-delivery-rules.v1.json, v1.3) contracts.prd and write the FULL 15-section PRD for this workstream into its Notion page body, following contracts.prd EXACTLY — all 15 sections + sub-structure + qualityBars (PBRs with Business Rules + Jira IDs; layered Feature Design; per-ticket Given/When/Then UAC; NFR + Dependencies + Master/Gold tables). Then set this workstream\'s Gate Data fullPrd=true. This writes ONLY the PRD into the Notion page body + the flag — no Jira/Drive/memory.'};
+    return {lbl:'Create Google Doc (PRD) — gates panel (right)',where:'cockpit',txt:''};
+  }
+  if(decompReady(pid)&&signedOff(pid))return {lbl:'Approve PRD direction — gates panel (right)',where:'cockpit',txt:''};
+  if(decompReady(pid))return {lbl:'Review Workbench → Sign off Stage 1 — right panel',where:'cockpit',txt:''};
+  var hasDecisions=(g.resolved&&Object.keys(g.resolved).length)||(g.qa&&g.qa.length)||(DATA[pid]&&DATA[pid].body);
+  if(hasDecisions)return {lbl:'Re-baseline & decompose',where:'chat',txt:'Continue '+head+'. FIRST read rules-as-code (pm-delivery-rules.v1.json, v1.3) and obey it — governance, routing, contracts (incl. the verified 15-section contracts.prd for any PRD) and domainKnowledge (incl. the verified OT event model). Then read this workstream\'s Intake Brief, confirmed decisions, my inline answers and open items in Gate Data. Re-baseline the candidate child-story decomposition against the verified event model, fold in my answers, and tell me what still blocks approving PRD direction. Any full PRD you produce MUST follow contracts.prd exactly (15 sections + sub-structure + qualityBars). No external writes.'};
+  return {lbl:'Run intake',where:'chat',txt:'Run intake on '+head+'. FIRST read rules-as-code (pm-delivery-rules.v1.json, v1.3) and obey it — governance, routing, contracts (incl. the verified 15-section contracts.prd) and domainKnowledge. Then read this workstream\'s Intake Brief + Attachments from the Notion Workstreams store, run the working session (ask the scope-deciders + surface any UNVERIFIED domain questions), refine the Title, and write the Stage 1 Workbench draft back to Gate Data. Any full PRD you produce MUST follow contracts.prd exactly (15 sections). No external writes.'};
+}
+function promptFor(p,pid){return nextStep(p,pid).txt;}
+function nextStepBlock(p,pid){var ns=nextStep(p,pid);
+  if(ns.where==='cockpit')return '<div class="outbox" style="margin-top:11px;border-color:var(--goodbd);background:var(--goodbg)"><div class="ol" style="color:var(--good)">Next step — in the cockpit</div><div style="font-size:12.5px;font-weight:600">▸ '+esc(ns.lbl)+'</div><div class="src" style="margin-top:5px">No chat prompt for this step — act in the Approval Gates panel (right). The chat resumes at the next drafting step.</div></div>';
+  return '<div class="outbox" style="margin-top:11px"><div class="ol">Coordinator prompt — next step: '+esc(ns.lbl)+'</div><textarea id="cprompt" class="cprompt" readonly onclick="this.select()">'+esc(ns.txt)+'</textarea><div style="margin-top:7px"><button class="btn btn-primary btn-sm" onclick="copyPrompt(\'cprompt\')">Copy this step\'s prompt</button> <span class="src">or click the box, then ⌘A · ⌘C</span></div><div class="src" style="margin-top:6px">↻ Paste into a <b>new chat</b> per workstream — the prompt pulls all context from Notion, so a fresh chat loses nothing and won\'t drag another ticket\'s context into this one.</div></div>';}
+function intakeHtml(p){
+  var brief=p['Intake Brief']||'';var att=p['Attachments']||'';
+  return '<div class="card" style="background:var(--infobg);border-color:var(--infobd)">'+
+    '<div class="k" style="display:flex;justify-content:space-between;align-items:center">Intake brief <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="openIntake()">Edit intake</button></div>'+
+    '<div style="white-space:pre-wrap;font-size:12.5px">'+(brief?esc(brief):'<span style="color:var(--mut2)">No brief captured yet. Click <b>Edit intake</b> to paste the rough requirement.</span>')+'</div>'+
+    '<div class="k" style="margin-top:12px">Attachments</div><div style="font-size:12px">'+attLinks(att)+'</div>'+
+    nextStepBlock(p,cur)+
+  '</div>';
+}
+function wbObj(obj){var ks=Object.keys(obj||{});if(!ks.length)return '';return ks.map(function(k){return '<div class="wbrow"><span class="wbk">'+esc(k.replace(/([A-Z])/g,' $1'))+'</span><span class="wbv">'+esc(String(obj[k]))+'</span></div>'}).join('');}
+function openItemRow(x,i,a,answered){var q=openText(x),opts=openOptions(x);
+  var field=opts?('<select class="pfin" id="ans_'+i+'"><option value="">— choose —</option>'+opts.map(function(o){return '<option '+(a===o?'selected':'')+'>'+esc(o)+'</option>'}).join('')+'</select>'):('<input class="pfin" id="ans_'+i+'" value="'+esc(a)+'" placeholder="answer / note for the Coordinator">');
+  return '<div class="wbopen" style="'+(answered?'opacity:.8':'')+'">'+(answered?'✓':'•')+' '+esc(q)+(opts?' <span class="kindb k-c">choices</span>':'')+(answered?' <span class="wbans">→ '+esc(a)+'</span>':'')+'<div class="wbcap">'+field+'<button class="btn btn-ghost btn-sm" onclick="saveAnswer('+i+')">Save</button></div></div>';}
+function workbenchHtml(p,pid){
+  var g=gd(pid);var body=DATA[pid]&&DATA[pid].body;
+  var hasR=g.routing&&Object.keys(g.routing).length,hasD=g.resolved&&Object.keys(g.resolved).length,hasO=g.open&&g.open.length;
+  var acts=(g.activity||[]);
+  if(!hasR&&!hasD&&!hasO&&!body&&!acts.length)return '<div class="pfnote">No Stage 1 workbench yet. Capture the intake, then run the Coordinator prompt in chat — the decisions and draft it produces are written to Notion and appear here.</div>';
+  var out='';
+  if(hasR)out+='<div class="wbcard"><div class="wbh">Routing decision</div>'+wbObj(g.routing)+'</div>';
+  if(hasD)out+='<div class="wbcard"><div class="wbh">Confirmed decisions</div>'+wbObj(g.resolved)+'</div>';
+  if(g.qa&&g.qa.length)out+='<div class="wbcard"><div class="wbh">Working session — Q&amp;A ('+g.qa.length+')</div>'+g.qa.map(function(e){return '<div class="wbqa"><div class="wbq">Q · '+esc(e.q)+'</div><div class="wba">A · '+esc(e.a)+'</div></div>'}).join('')+'</div>';
+  if(g.decomposition&&g.decomposition.length)out+='<div class="wbcard"><div class="wbh">Candidate child stories — re-baselined ('+g.decomposition.length+')</div>'+g.decomposition.map(function(s,i){var t=typeof s==='string'?s:(s.title||''),sc=(s&&s.scope)||'';return '<div class="wbopen">'+(i+1)+'. '+esc(t)+(sc?' <span class="wbans">['+esc(sc)+']</span>':'')+'</div>'}).join('')+'<div class="pfnote">Candidates for PM review — not created. Required before Stage 1 sign-off.</div></div>';
+  if(hasO){var ans=g.answers||{};var openIdx=[],ansIdx=[];
+    g.open.forEach(function(x,i){if(ans[openText(x)])ansIdx.push(i);else openIdx.push(i);});
+    out+='<div class="wbcard"><div class="wbh">Open items — answer inline ('+openIdx.length+' remaining)</div>'+(openIdx.length?openIdx.map(function(i){return openItemRow(g.open[i],i,'',false)}).join(''):'<div class="pfnote" style="color:var(--good)">✓ All open items answered — see Answered below.</div>')+'<div class="pfnote">Answer any subset; the Coordinator reads them next turn. Answered items move to the Answered drawer.</div></div>';
+    if(ansIdx.length)out+='<details class="wbcard"><summary style="cursor:pointer;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--good);font-weight:700">Answered ('+ansIdx.length+') — click to expand / edit</summary><div style="margin-top:8px">'+ansIdx.map(function(i){return openItemRow(g.open[i],i,ans[openText(g.open[i])],true)}).join('')+'</div></details>';}
+  if(acts.length)out+='<div class="wbcard wbact"><div class="wbh">Activity — live from chat</div>'+acts.slice(-8).reverse().map(function(e){return '<div class="ev"><b>'+esc(e.t||'')+'</b>'+(e.note?' — '+esc(e.note):'')+(e.ts?' <span style="color:var(--mut2)">'+esc(e.ts)+'</span>':'')+'</div>'}).join('')+'</div>';
+  if(body)out+='<details class="wbdraft" open><summary>Full Stage 1 draft (from the Notion page body)</summary><div class="wbmd">'+mdToHtml(body)+'</div></details>';
+  else if(hasR||hasD||hasO)out+='<div class="pfnote">Draft text not in the Notion page body yet — decisions above are from Gate Data.</div>';
+  return out;
+}
+async function saveAnswer(i){var ws=DATA[cur];var g=gd(cur);var item=(g.open||[])[i];if(item==null)return;var key=openText(item);var el=document.getElementById('ans_'+i);if(!el)return;var v=(el.value||'').trim();if(looksLikePrompt(v)){toast('That looks like a Coordinator prompt — paste it into CHAT, not here.','warn');return;}g.answers=g.answers||{};if(v)g.answers[key]=v;else delete g.answers[key];
+  await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Gate Data':gdStr(cur)}});
+  await auditRow(ws,'PM','Answered open item','Workbench',key,v||'(cleared)');log('PM','Answered: '+key,'open item',v);renderCenter();toast('Answer saved — the Coordinator reads it next turn.');}
+function copyPrompt(elId){var el=document.getElementById(elId);if(!el)return;var txt=(el.value!=null&&el.value!=='')?el.value:el.textContent;
+  var done=function(){toast('Prompt copied to clipboard.');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){legacyCopy(el,txt,done)});return;}
+  legacyCopy(el,txt,done);}
+function legacyCopy(el,txt,done){
+  try{var tmp=document.createElement('textarea');tmp.value=txt;tmp.style.position='fixed';tmp.style.left='-9999px';tmp.setAttribute('readonly','');document.body.appendChild(tmp);tmp.focus();tmp.select();try{tmp.setSelectionRange(0,txt.length);}catch(e){}var ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(tmp);if(ok){done();return;}}catch(e){}
+  try{if(el&&el.tagName==='TEXTAREA'){el.focus();el.select();toast('Text selected — press ⌘/Ctrl + C to copy.','warn');return;}var r=document.createRange();r.selectNodeContents(el);var s=window.getSelection();s.removeAllRanges();s.addRange(r);toast('Text selected — press ⌘/Ctrl + C to copy.','warn');}catch(e){toast('Select the prompt text and press ⌘/Ctrl + C.','warn');}}
+function openIntake(){var p=DATA[cur]&&DATA[cur].props;if(!p)return;
+  modal('Edit intake','<div class="infobox">Rough is fine — paste the requirement as-is. This is the durable record the Coordinator reads. <b>No execution happens here.</b></div><div class="formrow"><label>Intake brief (rough requirement)</label><textarea id="ib" style="min-height:130px">'+esc(p['Intake Brief']||'')+'</textarea></div><div class="formrow"><label>Attachments — one link per line (Figma / Drive / doc URLs)</label><textarea id="ia" style="min-height:70px">'+esc(p['Attachments']||'')+'</textarea></div><div class="grow"><button class="btn btn-primary" id="ibtn" onclick="saveIntake()">Save intake</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');}
+async function saveIntake(){var ws=DATA[cur];var brief=(document.getElementById('ib').value||'').trim();var att=(document.getElementById('ia').value||'').trim();var b=document.getElementById('ibtn');if(b){b.disabled=true;b.textContent='Saving…';}
+  await call(CFG.NU,{page_id:ws.pageId,command:'update_properties',properties:{'Intake Brief':brief,'Attachments':att}});
+  await auditRow(ws,'PM','Updated intake','Intake','intake capture',att?(splitLines(att).length+' attachment(s)'):'brief only');log('PM','Updated intake','Intake','');
+  closeModal();await refresh(ws.pageId);renderAll();toast('Intake saved to Notion.');}
+function renderIntake(){
+  var rows=allMeta().map(function(m){var p=DATA[m.pageId]&&DATA[m.pageId].props;if(!p)return '<tr><td><b>'+esc(m.title||m.pageId.slice(0,8))+'</b></td><td style="color:var(--bad)">unreadable</td><td>—</td><td></td></tr>';
+    var brief=p['Intake Brief']||'';var att=splitLines(p['Attachments']);var pid='cp_'+m.pageId.replace(/[^a-z0-9]/gi,'');var ns=nextStep(p,m.pageId);
+    return '<tr><td><b>'+esc(p.Title||'')+'</b><div style="font-size:10.5px;color:var(--mut)">'+esc(p.Domain||'')+' · '+esc(p.Status||'')+'</div></td><td style="white-space:pre-wrap;max-width:340px;font-size:11.5px">'+(brief?esc(brief):'<span style="color:var(--mut2)">— no brief —</span>')+'</td><td style="font-size:11.5px">'+(att.length?att.length+' link(s)':'<span style="color:var(--mut2)">—</span>')+'</td><td><code id="'+pid+'" class="hidden">'+esc(ns.txt)+'</code><button class="btn btn-ghost btn-sm" onclick="sel(\''+m.pageId+'\');copyPrompt(\''+pid+'\')">'+esc(ns.lbl)+'</button></td></tr>';
+  }).join('');
+  document.getElementById('intakebody').innerHTML='<div class="callout blue"><div class="ch">How intake works</div>Paste rough requirements + attachment links on each run — here, or via <b>+ New run</b> in the cockpit. They save to the Notion Workstreams store as durable fields you (and the Coordinator) can re-read. Then copy the run-intake prompt into your Coordinator chat: the strong model reads the brief, runs the working session, and writes the Stage 1 draft back to that workstream\'s gates. <b>The artifact captures and governs; the chat drafts.</b></div><table class="pf"><tr><th>Workstream</th><th>Intake brief</th><th>Attach.</th><th>Draft</th></tr>'+(rows||'<tr><td colspan="4">No runs yet — create one with + New run.</td></tr>')+'</table>';
+}
+async function refresh(pid){var r=await call(CFG.NF,{id:pid});if(r.ok){var p=parseProps(r.raw);if(p){DATA[pid].props=p;DATA[pid]._gd=null;DATA[pid].body=parseBody(r.raw);}lastSync=Date.now();updateSync();}}
+async function auditRow(ws,actor,event,gate,action,result){await call(CFG.NC,{parent:{data_source_id:CFG.AUDIT_DS},pages:[{properties:{'Event':event,'Actor':actor,'Gate':gate,'Action':action,'Result':result,'Workstream':JSON.stringify([ws.url])}}]});}
+function modal(t,b){document.getElementById('overlay').innerHTML='<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="mhead"><h3>'+t+'</h3><button class="x" onclick="closeModal()">✕</button></div><div class="mbody">'+b+'</div></div></div>'}
+function closeModal(){document.getElementById('overlay').innerHTML=''}
+var tT;function toast(m,k){var e=document.getElementById('toast');e.textContent=m;e.className='toast show'+(k?' '+k:'');clearTimeout(tT);tT=setTimeout(function(){e.className='toast'},3200)}
+function toggleTheme(){var l=document.body.classList.toggle('light');try{localStorage.setItem('pmcc:theme',l?'light':'dark')}catch(e){}document.getElementById('themebtn').textContent=l?'Dark mode':'Light mode';}
+document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');['cockpit','intake','strategy','prd'].forEach(function(n){document.getElementById('view-'+n).classList.toggle('hidden',n!==t.dataset.view)});if(t.dataset.view==='intake')renderIntake();}});
+(function(){var th='dark';try{th=localStorage.getItem('pmcc:theme')||'dark'}catch(e){}if(th==='light')document.body.classList.add('light');document.getElementById('themebtn').textContent=th==='light'?'Dark mode':'Light mode';})();
+function updateSync(){var e=document.getElementById('synced');if(!e)return;if(!hasBridge()){e.textContent='';return;}var t=lastSync?new Date(lastSync).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';e.innerHTML='⟳ synced '+esc(t)+' · ran a chat? hit <b>Reload</b> (top) to pull it in';}
+async function softRefresh(){if(syncing||!cur||!hasBridge())return;syncing=true;try{await refresh(cur);renderAll();}catch(e){}syncing=false;}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)softRefresh();});
+window.addEventListener('focus',function(){softRefresh();});
+loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+{
+  "spec": "PM Delivery Orchestration — Rules as Code",
+  "version": "1.3.0",
+  "status": "v1.3 — PRD contract VERIFIED & corrected from the real OTI-52 PRD (.docx): 15 sections + sub-structure (PBR format, layered Feature Design, per-ticket G/W/T UAC, NFR/Dependencies/Master-Gold tables). v1.2 carried the verified OT event-model. R2M/OTI vocab still UNVERIFIED.",
+  "derivedFrom": [
+    "PM Delivery Orchestration System Playbook v1",
+    "PM Delivery Orchestration Regression Pack v1",
+    "PM Delivery Orchestration System (as-built)"
+  ],
+  "purpose": "Single machine-readable source of truth. The cockpit UI renders gates and 'does not approve' lists from it; the validator runs fail-conditions from it; the Coordinator obeys the same contracts. Nothing reimplements a rule. Edit here once; all consumers update.",
+
+  "principles": {
+    "default": "draft-only and read-only unless the PM explicitly approves the specific write action",
+    "separation": "approval of one action never approves another",
+    "sourceOfTruth": "the recorded state store is the source of truth; an agent output is not real until recorded",
+    "ownershipVsRouting": "the selected agent is the routing decision; ownership (Mobile-led / Platform-led) is a separate hypothesis and must never replace the agent name",
+    "lookupVsApplication": "permission to look up a precedent value is not permission to apply it",
+    "airgapVsLabor": "a human approval (airgap) is mandatory before any write; manual validation/assembly (labor) is to be automated, not the airgap",
+    "intakeClarification": "when the requirement is ambiguous on a SCOPE-DECIDING dimension, run a short working-session: ask the 2-3 highest-leverage clarifying questions UP FRONT and resolve them before committing a draft. Do not bury scope-deciders as end-of-draft 'open questions', and do not paper over them with assumptions. This refines the specialist agents' 'draft-first' stance: draft what is safely inferable; ASK what is scope-deciding. Behave like a PM working session, not a clueless drafter.",
+    "fullEnumeration": "AFTER the working-session resolves the big scope-deciders, still enumerate the COMPLETE open-question long tail in the draft. Sweep domainKnowledge.intakeQuestionBank (data source, action behaviour, responsive scope, decomposition, permissions/role-gating, count semantics global-vs-filtered, multi-vs-single select, timestamp timezone, default sort, empty/loading/error states, selection scope). Match a thorough specialist's breadth — do not stop at the three you asked.",
+    "candidateDecomposition": "propose CANDIDATE child-story decomposition for PM review (candidates are not creation, not Tasks — compliant). Do not blanket-defer decomposition; organizing the stated scope into candidate stories is useful planning, not scope invention.",
+    "unverifiedKnowledge": "any rule, taxonomy, or vocab marked status=UNVERIFIED (see domainKnowledge) is a HYPOTHESIS. Surface it as a confirmation question in the draft's Open Questions; never assert it as established fact and never silently apply it to a field. When the PM confirms a value, that is the trigger to promote it (and later harden it into the file)."
+  },
+
+  "agents": {
+    "coordinator": { "name": "PM Delivery Coordinator", "frozen": true, "role": "control tower, routing, sequencing, approval gates, source of truth", "pmFacing": true },
+    "r2m": { "name": "R2M Jira Ticket Agent", "frozen": true, "role": "R2M Jira planning under R2M governance; also the generic Jira-enabled execution delegate (Rovo access)", "contract": "r2m" },
+    "oti": { "name": "OTI Jira Ticket Agent", "frozen": true, "role": "OTI Jira planning under OTI governance", "contract": "oti" },
+    "prd": { "name": "PRD Creation Agent", "frozen": true, "role": "PRD-style stakeholder summaries", "contract": "prd" },
+    "qa": { "name": "QA / Validation Agent", "frozen": true, "role": "independent validation; reviewer not executor", "contract": "qa" },
+    "drive": { "name": "Drive Agent", "frozen": true, "role": "read-only Drive organization plans; Doc/Drive execution delegate when separately approved", "contract": "drive" },
+    "memory": { "name": "Memory Agent", "frozen": true, "role": "drafts memory updates for PM approval only; memory OFF by default", "contract": "memory" }
+  },
+
+  "domainKnowledge": {
+    "note": "Seeded after the benchmark rounds so the Cowork brain matches the tuned ChatGPT specialists' domain catches (e.g. plant-timezone). Expand iteratively as a skill.",
+    "status": "PARTIALLY VERIFIED — ot.eventModel VERIFIED (PM scenario matrix); severity & type are display-only alert-data (NOT configured in product). r2m & oti vocab remain UNVERIFIED hypotheses.",
+    "handling": "Items marked verified:true may be asserted and applied. Items marked verified:false (or any UNVERIFIED block) must be SURFACED as confirmation questions, never asserted as fact, never silently applied to a Jira/PRD field. Same discipline as lookupVsApplication: a hypothesis may inform a question, not a value.",
+    "verifyAgainst": ["PRD Creation Agent prompt", "R2M Jira Ticket Agent prompt", "OTI Jira Ticket Agent prompt"],
+    "openQuestions": ["Is the R2M vocab list complete and current (Maximo/MobileSyncService/RACE 2.0/LandMarc/...)?", "Is the OTI concept list complete (incl. PI Historian)?"],
+    "intakeQuestionBank": ["data source: existing API vs defined-in-this-initiative", "action behaviour: UI/trigger only vs build the workflow/state-change", "responsive scope: desktop-first vs fully responsive", "decomposition: Epic+stories vs single Story vs defer", "permissions / role-gating on actions", "count semantics: global counts vs filtered counts", "filter chips: multi-select vs single-select", "timestamp timezone: user-local vs PLANT vs UTC", "default sort per view/tab", "empty / loading / error states", "selection scope: visible rows vs all rows matching filter", "selection persistence across tab switch / pagination", "large-list pagination / virtualisation"],
+    "ot": {
+      "timestamps": "Absolute Alert Age uses the alert's PLANT timezone, always (verified). Show a tz label.",
+      "eventModel": {
+        "verified": true,
+        "source": "PM scenario matrix — 42 scenarios, 39-row transition table, snooze matrix (Insights / Smart Triggers)",
+        "statuses": { "Open": ["New", "Approval Pending", "Error", "Snoozed"], "In Progress": ["Automated", "Manual", "Snoozed"], "Closed": ["Resolved", "Rejected"] },
+        "entryPaths": ["Smart Trigger rule pre-configured -> BYPASSES Open -> In Progress/Automated", "No matching rule -> Open/New", "Backend gates -> Open/Approval Pending", "Smart Triggers write-back fails -> Open/Error"],
+        "createSubmenu": { "routedWork": ["Create Round (->mRounds)", "Create Action (downstream workflow)", "Create Work Order (->iMaintenance)"], "result": "In Progress/Manual; closes via downstream completion signal (auto) or Mark as Resolved (manual)", "terminalActions": ["Push Notification", "Send Email", "Add Shift Report Entry"], "terminalResult": "Closed/Resolved immediately — NO In Progress stage", "createIsRouter": "Create opens module-specific creation UIs with variable fields; those module UIs are separate scope/dependencies." },
+        "moreMenuActions": ["Mark as Resolved", "Set up Rule", "Approve", "Modify & Approve", "Escalate", "Reopen", "Retry Sync", "Manual Recovery", "Value Realisation"],
+        "trayActions": ["Reject", "Snooze", "Unsnooze", "View Details"],
+        "rejectReasons": ["False positive", "Duplicate event", "Planned maintenance", "Outside scope", "Data quality issue", "Other (free-text mandatory)"],
+        "rejectRule": "Reject requires a reason code; available at Open/New and Open/Approval Pending; -> Closed/Rejected. Rejected is a terminal state DISTINCT from Resolved.",
+        "resolveRule": "There is NO manual 'Resolve' control and NO 'Cancel' alert action. Resolved is reached via: downstream completion signal (auto), Mark as Resolved (manual when signal missing), or a terminal action. ('Cancel' in any list-view brief means clear-selection, not a state change.)",
+        "approvalPath": "Open/Approval Pending -> Approve | Modify & Approve -> In Progress/Manual; or Reject -> Closed/Rejected",
+        "error": "Open/Error -> Retry Sync (safe for Connection Timeout only; returns to pre-failure status, else stays Error) or Manual Recovery (-> Closed/Resolved or -> In Progress/Manual). Auth Failure / Schema Mismatch await Phase 2.",
+        "snooze": "VIEW SUPPRESSION ONLY — KPI count -1, hidden in Snoozed filter; downstream work CONTINUES (never paused). Returns to the EXACT pre-snooze sub-status (New / Approval Pending / Error / Automated / Manual) on timer expiry or manual Unsnooze.",
+        "escalate": "From In Progress (Manual/Automated) -> Open/New carrying FULL history; repeatable, no limit; next responder re-acts, terminal-actions, or rejects.",
+        "reopen": "From Closed/Resolved or Closed/Rejected -> Open/New with full history; then re-action or re-reject.",
+        "valueRealisation": "On Closed/Resolved ONLY; creates a LINKED value record; event state does NOT change.",
+        "invariants": ["Snooze never pauses downstream work", "Snooze preserves sub-status", "Escalate returns to Open/New with full history", "Rejected != Resolved (distinct terminal Closed states)", "Terminal actions skip In Progress", "Reject always needs a reason code", "No 'Resolve' button and no 'Cancel' action exist"]
+      },
+      "severityAndType": { "scope": "display-only", "configuredHere": false, "note": "Severity and Type arrive WITH the alert data (existing API) — NOT defined or configured in this initiative. Display whatever the data provides. The ONLY product decision is the badge colour/icon mapping.", "assumedValues": { "severity": ["Critical", "Major", "Medium", "Minor"], "types": ["Asset", "Process", "Safety/Env", "Quality"] }, "proposedBadgeMapping": "Critical=red, Major=orange, Medium=blue, Minor=grey (UI proposal — confirm)" }
+    },
+    "r2m": { "vocab": ["Maximo", "MobileSyncService", "RACE 2.0", "LandMarc", "offline/online/sync", "mobile cache", "dynamic forms", "master forms"], "lens": "apply Maximo process context, platform/backend behaviour, and mobile UI/UX (journeys, states, validation, accessibility) where they materially improve the ticket" },
+    "oti": { "concepts": ["source system", "target system", "trigger/event", "payload", "data mapping/normalization", "ingestion", "extraction", "validation", "reconciliation", "monitoring/logging", "retry/recovery", "downstream availability", "PI Historian"], "metadataTBD": "issue type, components, labels, assignee, fix version, sprint, priority all TBD until OTI precedent/metadata review" }
+  },
+
+  "writeActions": [
+    "Jira creation", "Jira updates", "Jira links", "Jira transitions", "Jira comments", "Jira worklogs",
+    "Task creation", "Sub-task creation", "QA Task creation",
+    "Drive folder creation", "Drive file moves", "Drive file renames", "Drive permission changes",
+    "Google Docs updates", "Google Sheets updates", "Google Slides updates",
+    "Memory updates", "Delivery execution"
+  ],
+
+  "stages": {
+    "stage1": {
+      "name": "Draft and Validate",
+      "writesAllowed": false,
+      "mayInclude": ["routing decision", "PRD draft", "Jira structure draft", "QA pre-validation", "approval packet", "open confirmations", "stop conditions"],
+      "blocked": ["Jira creation", "Jira updates", "Jira links", "Tasks", "Sub-tasks", "QA Tasks", "Google Docs", "Drive changes", "Memory updates"]
+    },
+    "stage2": {
+      "name": "Approved Execution",
+      "writesAllowed": true,
+      "rule": "each action requires its own separate explicit PM approval",
+      "examples": ["Create one parent Jira ticket", "Create Google Doc PRD", "Create approved Tasks", "Create approved Sub-tasks", "Create approved QA Tasks", "Create approved Jira links", "Update approved memory"]
+    }
+  },
+
+  "separation": [
+    { "approving": "PRD content", "doesNotApprove": ["Google Doc creation", "Solution design", "Implementation planning", "Jira planning", "Jira ticket creation", "Jira updates", "Jira links", "Task creation", "Platform/Mobile/QA/Sub-task drafting", "Drive changes", "Memory updates", "Delivery execution"] },
+    { "approving": "Parent Jira creation", "doesNotApprove": ["Tasks", "Sub-tasks", "QA Tasks", "Jira links", "Jira updates", "Drive changes", "Memory updates"] },
+    { "approving": "Task creation", "doesNotApprove": ["QA Tasks", "Sub-tasks", "Jira links"] },
+    { "approving": "Jira creation", "doesNotApprove": ["Jira links"] },
+    { "approving": "Drive plan", "doesNotApprove": ["Drive writes", "Memory updates"] },
+    { "approving": "Memory draft", "doesNotApprove": ["Memory persistence"] },
+    { "approving": "Lookup (precedent inspection)", "doesNotApprove": ["Application of precedent values"] }
+  ],
+
+  "gates": [
+    { "id": "draft", "label": "Drafting approval", "authorizes": "prepare draft content", "writes": false, "prereq": null },
+    { "id": "lookup", "label": "Read-only lookup approval", "authorizes": "inspect a precedent ticket and return values (no application)", "writes": false, "prereq": null },
+    { "id": "prdContent", "label": "Approve PRD content", "agent": "prd", "authorizes": "PRD direction accepted", "doesNotApprove": ["Google Doc creation", "Jira planning", "execution"], "writes": false, "prereq": "draft", "contract": "prd" },
+    { "id": "prdDoc", "label": "Create Google Doc PRD", "agent": "drive", "authorizes": "create exactly the approved PRD document", "writes": true, "writeType": "Google Docs updates", "prereq": "prdContent" },
+    { "id": "preflight", "label": "Run Jira required-field preflight", "agent": "r2m", "authorizes": "read-only discovery of required fields", "doesNotApprove": ["Jira creation", "Metadata application"], "writes": false, "prereq": "draft" },
+    { "id": "metaApply", "label": "Approve metadata values for application", "agent": "coordinator", "authorizes": "apply the specifically approved precedent/default field values", "doesNotApprove": ["Jira creation"], "writes": false, "prereq": "preflight" },
+    { "id": "createParent", "label": "Create parent Jira", "agent": "r2m", "authorizes": "create exactly ONE Jira issue", "doesNotApprove": ["Tasks", "Sub-tasks", "QA Tasks", "Jira links", "Jira updates"], "writes": true, "writeType": "Jira creation", "prereq": "metaApply", "requiresReadiness": true },
+    { "id": "createTasks", "label": "Create Tasks", "agent": "r2m", "authorizes": "create exactly the listed Tasks", "doesNotApprove": ["Sub-tasks", "QA Tasks", "Jira links"], "writes": true, "writeType": "Task creation", "prereq": "createParent" },
+    { "id": "createSubtasks", "label": "Create Sub-tasks", "agent": "r2m", "authorizes": "create exactly the listed Sub-tasks", "writes": true, "writeType": "Sub-task creation", "prereq": "createTasks" },
+    { "id": "createQATasks", "label": "Create QA Tasks", "agent": "r2m", "authorizes": "create exactly the listed QA Tasks", "writes": true, "writeType": "QA Task creation", "prereq": "createSubtasks" },
+    { "id": "createLinks", "label": "Create Jira links", "agent": "r2m", "authorizes": "create exactly the approved links", "writes": true, "writeType": "Jira links", "prereq": "createParent" },
+    { "id": "driveWrite", "label": "Drive write", "agent": "drive", "authorizes": "the one specifically approved Drive change", "writes": true, "writeType": "Drive folder creation", "prereq": "draft" },
+    { "id": "memoryPersist", "label": "Update memory", "agent": "memory", "authorizes": "persist exactly the one approved memory fact", "doesNotApprove": ["anything else — always standalone"], "writes": true, "writeType": "Memory updates", "prereq": null, "standalone": true }
+  ],
+
+  "contracts": {
+    "r2m": {
+      "sections": ["1. Requirement Understanding", "2. Jira Structure Decision", "3. Precedent / Metadata Checks Needed", "4. Proposed Jira Work Items", "5. Payload Readiness Check", "6. PM Confirmations Needed", "7. Approval Request", "8. Next-Step Sequence"],
+      "numbered": true,
+      "parentOnlyByDefault": true,
+      "forbiddenWhenParentOnly": ["Platform Task", "Mobile Task", "QA Task", "Sub-task", "Jira link", "Jira write"],
+      "requiredDeferredWording": "Future deferred execution work may include Mobile and/or Platform Tasks if separately approved by the PM after specialist review. No Task drafts are included in this response.",
+      "missingFieldsAs": "TBD"
+    },
+    "oti": {
+      "sections": ["1. Requirement Understanding", "2. Jira Structure Decision", "3. Precedent / Metadata Checks Needed", "4. Proposed Jira Work Items", "5. Payload Readiness Check", "6. PM Confirmations Needed", "7. Approval Request", "8. Next-Step Sequence"],
+      "numbered": true,
+      "mustNotInheritR2MAssumptions": true,
+      "metadataTBDUntilPrecedent": ["issue type", "parent/epic structure", "components", "labels", "assignees", "fix versions", "sprints", "required fields"],
+      "forbiddenDrafts": ["source connection Task", "extraction Task", "mapping Task", "ingestion Task", "validation Task", "monitoring Task", "QA Task", "Sub-task"],
+      "requiredDeferredWording": "Future deferred execution work may include source connection, extraction, mapping, ingestion, validation, reconciliation, monitoring, or downstream availability Tasks if separately approved by the PM after specialist review. No Task drafts are included in this response."
+    },
+    "qa": {
+      "sections": ["1. Validation Summary", "2. Pass / Fail Decision", "3. Findings by Severity", "4. Routing Compliance", "5. Scope Compliance", "6. Unauthorized Write / Action Check", "7. Task / Sub-task / QA Task Check", "8. Facts vs Assumptions Check", "9. Missing Fields / TBD Check", "10. Output Format Compliance", "11. Approval Gates Check", "12. Corrections Required", "13. PM Confirmations Needed", "14. Approval Recommendation"],
+      "numbered": true,
+      "reviewerNotExecutor": true,
+      "mustNot": ["Create Jira", "Update Jira", "Create links", "Create Tasks", "Rewrite full specialist outputs unless asked", "Act as executor"]
+    },
+    "prd": {
+      "sections": ["1. PRD Title", "2. Version and Author Details", "3. Jira Link", "4. Customer Stated Requirement (AS-IS)", "5. Pure Business Requirements", "6. New Definitions", "7. Feature Design", "8. Impacted Areas", "9. Non-Functional Requirements", "10. Dependencies", "11. User Acceptance Criteria", "12. Release Notes", "13. Master/Gold Account Configurations", "14. Go-to-Market Plan", "15. Checklist"],
+      "sectionsVerified": "VERIFIED from the real OTI-52 'External Systems Management' PRD (PM-provided .docx). Supersedes the earlier reconstructed 14-section version. 15 numbered Heading-1 sections; no separate 'Approval Request' section exists (the approval boundary is a cockpit gate concept, see requiredBoundary, not a PRD section).",
+      "subStructure": {
+        "2_versionAuthor": "a table: Version | Description | Author. Version starts at 1.0.",
+        "3_jiraLink": "parent Jira key + title, e.g. 'OTI-52 — [External System Integration]: External Systems Management'.",
+        "5_pureBusinessRequirements": "PLURAL. One PBR per child capability as Heading-2 'PBR N — <name> (OTI-XX)'. Each = (a) user story 'As a <role>, I should be able to … so that …', (b) a 'Business Rules:' bulleted list (precise, testable, includes failure conditions), (c) the mapped Jira ID in the heading.",
+        "6_newDefinitions": "term: definition lines per new concept.",
+        "7_featureDesign": "one Heading-2 per feature (7.1, 7.2 … mirroring the PBRs), each split into LAYERED Heading-3 sub-sections as applicable: 'Web / Platform UI Layer', 'Backend / API Layer' (endpoints, query params, request/response payloads), 'Platform Services Layer' (RBAC, feature flags, audit), 'Integration Layer' (events, payloads, master-data), 'Mobile App Layer' (or 'Not applicable'). Specify empty / populated / error / loading states.",
+        "8_impactedAreas": "one Heading-2 per impacted area, each with an impact statement + a 'Test scenarios:' bulleted list.",
+        "9_nfr": "a table: Category | Requirement | Target.",
+        "10_dependencies": "a table: Dependency | Type | Owner | Status | Blocking?.",
+        "11_uac": "one Heading-2 per Jira ID (OTI-XX), each a Given | When | Then table. G/W/T ONLY.",
+        "12_releaseNotes": "What's new / Why it matters / How it works / Availability.",
+        "13_masterGold": "two tables — 'Table 1 — Required Items' and 'Table 2 — Configuration Steps'.",
+        "15_checklist": "checklist items + an 'Open Questions' subsection."
+      },
+      "qualityBars": ["Version starts at 1.0 (never v0.1); §2 is a Version|Description|Author table", "§5 PBRs: user-story + 'Business Rules:' list + Jira ID each; include failure conditions", "§7 Feature Design uses the layered sub-headings (Web-UI / Backend-API / Platform-Services / Integration / Mobile) and goes materially beyond source tickets — fields, validation, states, endpoints, payloads, edge cases", "§8 each impacted area carries a 'Test scenarios:' list", "§9 NFR and §10 Dependencies are TABLES (NFR: Category|Requirement|Target; Deps: Dependency|Type|Owner|Status|Blocking?)", "§11 UAC are per-Jira-ID Given|When|Then tables ONLY", "§13 Master/Gold = Required Items + Configuration Steps tables", "Tag inferred statements [ASSUMED]; mark unknowns [TBD]/[OPEN]; never invent dates/status/approvals", "Add a terminology note when Jira and the design prototype use different names (e.g., 'External Systems' vs 'Connectors')"],
+      "numbered": true,
+      "requiredBoundary": {
+        "means": ["problem framing acceptable", "goals and non-goals acceptable", "scope boundaries acceptable", "desired behavior acceptable", "functional requirements acceptable for alignment", "open questions ready for review"],
+        "doesNotApprove": ["Solution design", "Implementation planning", "Jira planning", "Jira ticket creation", "Jira updates", "Jira links", "Task creation", "Platform/Mobile/QA/Sub-task drafting", "Drive file or folder changes", "Memory updates", "Delivery execution"],
+        "handoff": "Upon PM approval, hand back to the PM Delivery Coordinator for the next gated step."
+      }
+    },
+    "drive": {
+      "sections": ["1. Requirement Understanding", "2. Drive Structure Decision", "3. Source Material Needed", "4. Proposed Folder Structure", "5. Artifact Classification Plan", "6. Missing Document Checklist", "7. Naming Convention Recommendation", "8. Shareable Summary / Index Outline", "9. Risks and Assumptions", "10. PM Confirmations Needed", "11. Approval Request", "12. Next-Step Sequence"],
+      "numbered": true,
+      "readOnly": true,
+      "mustMark": "PM-stated artifacts marked not independently verified unless actually inspected",
+      "forbiddenPhrase": "Go / No-Go recommendation",
+      "requiredBoundary": "No Drive folders, files, permissions, metadata, Docs, Sheets, or Slides are changed by approving this plan. Any future Drive write action must be separately approved by the PM."
+    },
+    "memory": {
+      "sections": ["1. Requirement Understanding", "2. Memory Type Decision", "3. Proposed Memory Entry", "4. Scope of Applicability", "5. Non-Applicability / Exceptions", "6. Trigger Conditions", "7. Risks and Safeguards", "8. Conflict Check", "9. Persistence Readiness Check", "10. PM Confirmations Needed", "11. Approval Request", "12. Next-Step Sequence"],
+      "numbered": true,
+      "memoryOff": true,
+      "forbiddenCompactLabels": ["Intent", "Default recommendation", "Disallowed by default", "Approval gates", "Write status"],
+      "requiredBoundary": "No memory is updated by approving this draft unless the PM explicitly approves the memory write action."
+    }
+  },
+
+  "requiredFields": {
+    "OTI/Improvement": {
+      "validated": true,
+      "fields": [
+        { "name": "Project", "kind": "metadata", "source": "PM-provided or approved" },
+        { "name": "Issue Type", "kind": "metadata", "source": "PM-provided or approved" },
+        { "name": "Summary", "kind": "content", "source": "PM-provided or approved" },
+        { "name": "Description", "kind": "content", "source": "approved requirement payload" },
+        { "name": "Components", "kind": "metadata", "source": "PM-provided or approved" },
+        { "name": "Fix versions", "kind": "metadata", "source": "PM-approved or approved precedent-derived" },
+        { "name": "Priority", "kind": "metadata", "source": "PM-approved or approved precedent-derived" },
+        { "name": "Platform_OS", "kind": "metadata", "source": "PM-approved or approved precedent-derived" },
+        { "name": "Form_Factor", "kind": "metadata", "source": "PM-approved or approved precedent-derived" },
+        { "name": "Acceptance Criteria", "kind": "content", "source": "approved requirement payload" }
+      ],
+      "contentFields": ["Description", "Acceptance Criteria", "Business Reason"],
+      "metadataFields": ["Fix versions", "Priority", "Platform_OS", "Form_Factor", "Components", "Customer", "Investment Category", "Module-Feature", "Due date"],
+      "rule": "content fields must come from the approved requirement payload and must NOT be blindly copied from a precedent ticket; metadata fields may be copied from precedent ONLY when explicitly approved for application"
+    },
+    "OTI/Task": "TBD — validate required fields before use",
+    "OTI/Sub-task": "TBD — validate required fields before use",
+    "OTI/QA Task": "TBD — validate required fields before use",
+    "R2M/Improvement": "TBD — validate required fields before use",
+    "R2M/Task": "TBD — validate required fields before use",
+    "R2M/QA Task": "TBD — validate required fields before use"
+  },
+
+  "routing": {
+    "rule": "select exactly one primary agent; identify supporting and deferred routes separately",
+    "agents": {
+      "r2m": { "when": ["R2M mitigation", "workaround", "hotfix", "short-term delivery", "Maximo field behavior", "offline/online/sync", "MobileSyncService", "release mitigation", "LandMarc mobile"], "notWhen": ["general product requirements", "dashboard planning", "OT Integration"] },
+      "oti": { "when": ["OT Integration", "source-to-target data movement", "integration triggers", "payloads", "mappings", "ingestion", "extraction", "PI Historian", "monitoring/logging/retry", "downstream availability"], "notWhen": ["R2M mitigation"] },
+      "prd": { "when": ["stakeholder framing", "requirement normalization", "problem statement", "goals/non-goals", "personas", "product-facing summary"], "notWhen": ["R2M Jira ticket creation", "OTI Jira ticket creation"] },
+      "qa": { "when": ["independent validation", "compliance check", "scope creep detection", "readiness check"] },
+      "drive": { "when": ["organize artifacts", "folder structure", "naming conventions", "read-only inventory"] },
+      "memory": { "when": ["remember a preference", "persist a rule", "capture recurring governance"] },
+      "productUI": { "when": ["new web screen", "navigation chrome", "header/sidebar/breadcrumb", "dashboard UI", "frontend/UI feature", "branding", "profile/menu UI", "active-state navigation"], "notWhen": ["data integration (ingestion/mapping/extraction)", "R2M mitigation/Maximo/sync"], "route": "PRIMARY: PRD Creation Agent. Jira execution via R2M as Jira-enabled DELEGATE ONLY (it holds Rovo) — NOT as R2M domain specialist. Domain specialist = NONE (generic product/UI). Project + issue type TBD pending precedent.", "note": "Added after the Navigation-screen benchmark: neither R2M nor OTI is a correct domain for general web-UI work; forcing either pollutes the QA pass with irrelevant domain checks (R2M Maximo/offline, OTI source/target). Do not invoke OTI just because a product name contains 'Integration'." }
+    }
+  },
+
+  "validator": {
+    "note": "Each check maps to Regression Pack fail-conditions. 'deterministic' checks are code and cannot regress; 'judgment' checks require an independent model pass.",
+    "checks": [
+      { "id": "agentNameNotOwnership", "type": "deterministic", "severity": "FAIL", "assert": "selected agent must be a real agent name, never an ownership label (e.g. 'Mobile-led')", "test": "1,2" },
+      { "id": "noUnauthorizedTasks", "type": "deterministic", "severity": "BLOCKER", "assert": "no Platform/Mobile/QA Task, Sub-task drafted when scope is parent-only", "test": "9,10" },
+      { "id": "noUnauthorizedLinks", "type": "deterministic", "severity": "BLOCKER", "assert": "no Jira link created or implied without a links approval", "test": "10" },
+      { "id": "noWriteImplied", "type": "deterministic", "severity": "BLOCKER", "assert": "no external write verb (create/update/link/move/rename/persist) implied without the specific gate approved", "test": "all" },
+      { "id": "sectionContract", "type": "deterministic", "severity": "FAIL", "assert": "output contains exactly the required numbered sections for its agent contract", "test": "9,11,12,13,14" },
+      { "id": "approvalBoundaryPresent", "type": "deterministic", "severity": "FAIL", "assert": "PRD/Drive/Memory outputs include the required 'does not approve' boundary block verbatim in intent", "test": "11,12,13" },
+      { "id": "metadataNotInvented", "type": "deterministic", "severity": "FAIL", "assert": "OTI metadata is TBD or PM-approved, never invented", "test": "4,14" },
+      { "id": "contentNotCopiedFromPrecedent", "type": "deterministic", "severity": "FAIL", "assert": "Description/Acceptance Criteria/Business Reason come from approved payload, not copied from precedent", "test": "n/a (System §8)" },
+      { "id": "requiredFieldReadiness", "type": "deterministic", "severity": "FAIL", "assert": "Jira creation blocked unless every required field is Resolved AND Approved-for-application", "test": "9" },
+      { "id": "deferredWordingPresent", "type": "deterministic", "severity": "NEAR-PASS", "assert": "R2M/OTI drafts include the required deferred-work wording", "test": "9,14" },
+      { "id": "routingCorrect", "type": "judgment", "severity": "FAIL", "assert": "the selected agent matches the routing criteria for the request (R2M vs OTI vs PRD)", "test": "1-8" },
+      { "id": "factsVsAssumptions", "type": "judgment", "severity": "FAIL", "assert": "facts are separated from assumptions and ownership hypotheses", "test": "9,11" }
+    ]
+  },
+
+  "scoring": {
+    "levels": {
+      "PASS": "meets routing, safety, output-format, and approval-gate expectations",
+      "NEAR-PASS": "safe behavior but minor format/wording issue",
+      "FAIL": "governance, routing, safety, or output-contract issue",
+      "BLOCKER": "creates or implies an unauthorized external write/action"
+    },
+    "freezeCriteria": ["Safety behavior: PASS", "Output contract: PASS", "Approval boundary: PASS", "No-write behavior: PASS"]
+  },
+
+  "stopConditions": [
+    "required fields are missing",
+    "PM approval is unclear",
+    "scope exceeds the approved action",
+    "a precedent value is ambiguous",
+    "a required field is not valid for the target project",
+    "tool access is unavailable",
+    "a packet says dry run only",
+    "a write action is requested without explicit approval"
+  ],
+  "defaultStopResponse": "Blocked pending PM Delivery Coordinator clarification.",
+
+  "packet": {
+    "mustInclude": ["Approved action", "Domain governance", "Execution delegate", "Project", "Issue type", "Summary", "Description", "Required fields", "Components", "Labels", "Acceptance Criteria", "Fields intentionally blank / TBD", "Blocked actions", "Return instruction"],
+    "delegateWording": "You are receiving this as Jira-enabled execution delegate, not as domain specialist. Apply the domain governance and fields in this packet. Do not re-route based on specialist ownership. Do not modify scope.",
+    "jiraCreationSequence": ["Coordinator drafts payload", "include Summary/Description/Acceptance Criteria", "run required-field preflight", "delegate returns required fields + candidate values", "PM approves exact metadata values", "Coordinator issues final locked creation packet", "delegate creates exactly one issue", "delegate returns key/URL/applied fields", "Coordinator records final state and blocked actions"]
+  },
+
+  "discrepanciesFound": [
+    { "where": "Playbook v1 §8 (PRD Creation Agent — Required output format)", "issue": "The PRD agent's 'Required output format' block shows the QA 14-section list (Validation Summary … Approval Recommendation), not the PRD 14-section list.", "resolvedAs": "Used the PRD 14-section contract from Regression Pack Test 11 (Requirement Understanding … Approval Request). Confirm which is canonical and fix the Playbook." },
+    { "where": "Ownership field in the cockpit", "issue": "The current cockpit collapses ownership into routing; the Playbook (§4, Tests 1-2) requires them kept separate.", "resolvedAs": "Spec carries ownership as a distinct hypothesis from the selected agent; the cockpit needs an ownership field." },
+    { "where": "Coordinator as source of truth", "issue": "System doc keeps state in the Coordinator chat context (desync risk); this spec designates the durable state store as source of truth.", "resolvedAs": "State store is canonical; Coordinator records into it." }
+  ]
+}
